@@ -1,0 +1,120 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/archivo/wdth.css';
+
+/*
+ * Matchday tokens. Status colours follow the referee's cards:
+ * turf = confirmed / primary, yellow card = waiting, red card = problem.
+ */
+:root {
+  --chalk: #f6f7f4;
+  --surface: #ffffff;
+  --sunken: #eceee9;
+  --ink: #172026;
+  --ink-muted: #56636a;
+  --line: #dce1dc;
+  --turf: #1e7a4f;
+  --turf-strong: #155c3b;
+  --turf-soft: #e1f0e7;
+  --on-turf: #ffffff;
+  --yellow-card: #f2b705;
+  --yellow-card-soft: #fdf3d3;
+  --on-yellow-card: #3d2e00;
+  --red-card: #c8263a;
+  --red-card-soft: #fbe4e7;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --chalk: #0e1714;
+    --surface: #14211d;
+    --sunken: #0a1210;
+    --ink: #e7ece9;
+    --ink-muted: #9aaba3;
+    --line: #24332d;
+    --turf: #4cc38a;
+    --turf-strong: #6fd6a3;
+    --turf-soft: #173728;
+    --on-turf: #06140d;
+    --yellow-card: #f5c84c;
+    --yellow-card-soft: #3a3010;
+    --on-yellow-card: #1f1800;
+    --red-card: #ff6b7a;
+    --red-card-soft: #3b1a1f;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --font-sans: 'Archivo Variable', ui-sans-serif, system-ui, sans-serif;
+
+  --color-chalk: var(--chalk);
+  --color-surface: var(--surface);
+  --color-sunken: var(--sunken);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-line: var(--line);
+  --color-turf: var(--turf);
+  --color-turf-strong: var(--turf-strong);
+  --color-turf-soft: var(--turf-soft);
+  --color-on-turf: var(--on-turf);
+  --color-yellow-card: var(--yellow-card);
+  --color-yellow-card-soft: var(--yellow-card-soft);
+  --color-on-yellow-card: var(--on-yellow-card);
+  --color-red-card: var(--red-card);
+  --color-red-card-soft: var(--red-card-soft);
+}
+
+/* Scoreboard type: extra-wide, heavy. Used for league names and page titles only. */
+@utility type-display {
+  font-size: clamp(2rem, 6vw, 2.75rem);
+  line-height: 1;
+  font-weight: 800;
+  font-stretch: 125%;
+  letter-spacing: -0.01em;
+}
+
+@utility type-title {
+  font-size: 1.625rem;
+  line-height: 1.15;
+  font-weight: 750;
+  font-stretch: 115%;
+}
+
+@utility type-heading {
+  font-size: 1.0625rem;
+  line-height: 1.3;
+  font-weight: 650;
+  font-stretch: 105%;
+}
+
+/* Tables and numbers: condensed with aligned figures. */
+@utility type-tabular {
+  font-stretch: 85%;
+  font-variant-numeric: tabular-nums;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-chalk font-sans text-ink antialiased;
+    font-stretch: 100%;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--turf);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

@@ -25,6 +25,13 @@ services:
       DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-league}
       DB_USER: ${DB_USER:-league}
       DB_PASSWORD: ${DB_PASSWORD:-league}
+      # "dev" enables name-only test login. Add "google" and/or "discord" once credentials are set,
+      # e.g. SPRING_PROFILES_ACTIVE=dev,google
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET:-}
     ports:
       - "8080:8080"
     depends_on:
