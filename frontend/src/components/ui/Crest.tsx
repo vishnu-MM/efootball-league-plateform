@@ -2,18 +2,21 @@ import { useId } from 'react'
 import { cn } from '../../lib/cn'
 import { initials } from '../../lib/initials'
 
-/** Kit colour pairs: [shirt, trim]. Each pair keeps the initials readable. */
+/**
+ * Kit pairs from the palette: [shirt, trim]. Shirts are always bright so a crest reads on
+ * dark surfaces; the ink outline makes it read on bright ones.
+ */
 const KITS: ReadonlyArray<readonly [string, string]> = [
-  ['#1E7A4F', '#F6F7F4'],
-  ['#C8263A', '#FFFFFF'],
-  ['#1B3A8C', '#F2B705'],
-  ['#5B2A86', '#F6F7F4'],
-  ['#0F5257', '#F5C84C'],
-  ['#172026', '#4CC38A'],
-  ['#7A1F3D', '#F2B705'],
-  ['#B4541A', '#FFFFFF'],
-  ['#2D6CDF', '#FFFFFF'],
-  ['#F2B705', '#172026'],
+  ['var(--coral)', 'var(--ink)'],
+  ['var(--violet)', 'var(--ink)'],
+  ['var(--mustard)', 'var(--ink)'],
+  ['var(--aqua)', 'var(--ink)'],
+  ['var(--sage)', 'var(--ink)'],
+  ['var(--paper)', 'var(--ink)'],
+  ['var(--coral-soft)', 'var(--ink)'],
+  ['var(--violet-soft)', 'var(--ink)'],
+  ['var(--aqua-deep)', 'var(--ink)'],
+  ['var(--sage-deep)', 'var(--ink)'],
 ]
 
 type Pattern = 'plain' | 'hoop' | 'sash' | 'halves'
@@ -39,7 +42,10 @@ type CrestProps = {
   className?: string
 }
 
-/** A generated club crest: shield, kit colours and pattern derived from the seed, with the league's initials. */
+/**
+ * A generated club crest in the retro print style: flat palette fills inside a bold ink
+ * outline, kit colours and pattern derived from the seed, with the league's initials.
+ */
 export function Crest({ seed, name, size = 40, className }: CrestProps) {
   const clipId = useId()
   const h = hash(seed || name)
@@ -49,9 +55,9 @@ export function Crest({ seed, name, size = 40, className }: CrestProps) {
 
   return (
     <svg
-      viewBox="0 0 40 46"
+      viewBox="-1 -1 42 48"
       width={size}
-      height={(size * 46) / 40}
+      height={(size * 48) / 42}
       role="img"
       aria-label={`${name} crest`}
       className={cn('shrink-0', className)}
@@ -62,19 +68,23 @@ export function Crest({ seed, name, size = 40, className }: CrestProps) {
         </clipPath>
       </defs>
       <g clipPath={`url(#${clipId})`}>
-        <rect width="40" height="46" fill={shirt} />
-        {pattern === 'hoop' && <rect y="29" width="40" height="6" fill={trim} opacity="0.9" />}
-        {pattern === 'sash' && <path d="M-4 40 44 4v9L-4 49z" fill={trim} opacity="0.25" />}
-        {pattern === 'halves' && <rect x="20" width="20" height="46" fill="#000" opacity="0.14" />}
+        <rect width="40" height="46" style={{ fill: shirt }} />
+        {pattern === 'hoop' && <rect y="29" width="40" height="6" style={{ fill: trim }} />}
+        {pattern === 'sash' && <path d="M-4 40 44 4v9L-4 49z" style={{ fill: trim }} opacity="0.3" />}
+        {pattern === 'halves' && <rect x="20" width="20" height="46" style={{ fill: 'var(--ink)' }} opacity="0.16" />}
       </g>
-      <path d={SHIELD} fill="none" stroke={trim} strokeOpacity="0.55" strokeWidth="1.5" />
+      <path d={SHIELD} fill="none" style={{ stroke: 'var(--ink)' }} strokeWidth="2.25" strokeLinejoin="round" />
       <text
         x="20"
-        y={pattern === 'hoop' ? 22.5 : 25.5}
+        y={pattern === 'hoop' ? 21 : 24.5}
         textAnchor="middle"
         dominantBaseline="middle"
-        fill={trim}
-        style={{ fontFamily: 'Archivo Variable, sans-serif', fontWeight: 800, fontStretch: '125%', fontSize: letters.length > 1 ? 13 : 16 }}
+        style={{
+          fill: trim,
+          fontFamily: 'var(--ff-display)',
+          fontWeight: 600,
+          fontSize: letters.length > 1 ? 16 : 19,
+        }}
       >
         {letters}
       </text>

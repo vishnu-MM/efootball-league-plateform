@@ -5,17 +5,18 @@ import { cn } from '../../lib/cn'
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
 type Size = 'md' | 'lg' | 'sm'
 
+// Colours come from the surrounding tile's tone, so a button always suits its surface.
 const VARIANTS: Record<Variant, string> = {
-  primary: 'bg-turf text-on-turf hover:bg-turf-strong',
-  secondary: 'border border-line bg-surface text-ink hover:bg-sunken',
-  ghost: 'text-ink hover:bg-sunken',
-  danger: 'border border-line bg-surface text-red-card hover:bg-red-card-soft',
+  primary: 'bg-btn-primary text-btn-primary-fg',
+  secondary: 'bg-btn-secondary text-btn-secondary-fg',
+  ghost: 'text-tile-fg hover:bg-tile-soft',
+  danger: 'bg-ink text-coral',
 }
 
 const SIZES: Record<Size, string> = {
-  sm: 'h-9 px-3 text-sm',
-  md: 'h-11 px-4',
-  lg: 'h-12 px-5 text-[1.0625rem]',
+  sm: 'h-9 px-4 text-xs',
+  md: 'h-11 px-5 text-[0.8125rem]',
+  lg: 'h-12 px-6 text-sm',
 }
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -31,7 +32,7 @@ export function Button({ variant = 'primary', size = 'md', asChild, className, t
     <Component
       type={asChild ? undefined : (type ?? 'button')}
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-lg font-semibold whitespace-nowrap transition-colors',
+        'press inline-flex items-center justify-center gap-2 rounded-pill font-mono font-medium whitespace-nowrap',
         'disabled:pointer-events-none disabled:opacity-50',
         VARIANTS[variant],
         SIZES[size],

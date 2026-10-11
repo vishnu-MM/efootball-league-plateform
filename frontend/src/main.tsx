@@ -50,7 +50,25 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
-      <Toaster position="top-center" richColors closeButton />
+      <Toaster
+        position="top-center"
+        closeButton
+        icons={{
+          success: <span className="size-2.5 rounded-full bg-aqua" />,
+          error: <span className="size-2.5 rounded-full bg-coral" />,
+          warning: <span className="size-2.5 rounded-full bg-mustard" />,
+          info: <span className="size-2.5 rounded-full bg-paper" />,
+        }}
+        toastOptions={{
+          unstyled: true,
+          classNames: {
+            toast: 'flex w-full animate-pop items-center gap-3 rounded-pill bg-surface-dark-2 py-2 pr-2 pl-5 font-mono text-[0.8125rem] text-on-dark',
+            icon: 'flex shrink-0 items-center',
+            content: 'min-w-0 flex-1',
+            closeButton: 'order-last grid size-9 shrink-0 place-items-center rounded-full bg-paper text-ink [&_svg]:size-4',
+          },
+        }}
+      />
     </QueryClientProvider>
   </StrictMode>,
 )

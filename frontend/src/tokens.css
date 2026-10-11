@@ -1,0 +1,75 @@
+/*
+ * Neo-Retro Utility design tokens: the single source of truth for every colour,
+ * radius, font and size in the app. Components reference these (directly or through
+ * the Tailwind theme in styles.css); no other file may contain raw colour values.
+ */
+:root {
+  /* Canvas & neutrals */
+  --canvas: #c5d3ca; /* page background behind the app frame (sage) */
+  --ink: #1c1c1e; /* app frame bg, dark text on bright surfaces */
+  --surface-dark: #2a2a2c; /* dark cards inside the frame */
+  --surface-dark-2: #36363a; /* inputs, nested items on dark */
+  --hairline-dark: #3a3a3e; /* sidebar divider, subtle separators on dark */
+  --paper: #ffffff; /* icon buttons, dropdown pills */
+  --sage: #c9d6ce; /* light card surface */
+  --sage-deep: #b6c6bc; /* pills/buttons on sage cards */
+  --frame-border: rgb(159 178 166 / 0.6); /* the one permitted border: the app frame */
+
+  /* Brand brights (used as full card backgrounds) */
+  --coral: #f26a55;
+  --coral-soft: #ff8c76;
+  --violet: #7468f2;
+  --violet-soft: #8c82f5;
+  --mustard: #f4c84a;
+  --aqua: #a8e3ee;
+  --aqua-deep: #7fccdb;
+
+  /* Text */
+  --text-on-dark: #f2f2f2;
+  --text-muted-dark: #8e8e93;
+  --text-on-bright: #1c1c1e;
+
+  /* Tinted chip fills (chips on dark surfaces) */
+  --tint-mustard: rgb(244 200 74 / 0.18);
+  --tint-violet: rgb(116 104 242 / 0.22);
+  --tint-aqua: rgb(168 227 238 / 0.18);
+  --tint-coral: rgb(242 106 85 / 0.2);
+
+  /*
+   * Third-party marks. Google's sign-in branding rules require its four-colour "G";
+   * these are used only by that logo and never as UI colours.
+   */
+  --brand-google-blue: #4285f4;
+  --brand-google-green: #34a853;
+  --brand-google-yellow: #fbbc05;
+  --brand-google-red: #ea4335;
+
+  /* Radii */
+  --r-frame: 40px; /* outer app container */
+  --r-card: 32px; /* bento tiles */
+  --r-inner: 20px; /* cards nested inside tiles */
+  --r-tile: 14px; /* square icon tiles */
+  --r-chip: 6px; /* inline data highlights */
+  --r-pill: 999px; /* buttons, inputs, selects, chips */
+
+  /* Spacing (8pt grid) */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+
+  /* Sizes */
+  --icon-btn: 44px;
+  --sidebar-w: 76px;
+  --stroke-icon: 1.5px;
+
+  /* Fonts */
+  --ff-display: 'Barlow Condensed', 'Oswald', 'Antonio', sans-serif;
+  --ff-metric: 'Barlow Semi Condensed', 'Space Grotesk', sans-serif;
+  --ff-body: 'DM Mono', 'JetBrains Mono', 'IBM Plex Mono', monospace;
+  --ff-crumb: 'Barlow', 'Inter', sans-serif;
+}

@@ -7,15 +7,10 @@ const LABELS: Record<Role, string> = {
   MANAGER: 'Manager',
 }
 
+/** A chip: tinted on dark tiles, the tile's own soft hue on bright ones. */
 export function RoleBadge({ role, className }: { role: Role; className?: string }) {
   return (
-    <span
-      className={cn(
-        'inline-flex h-6 items-center rounded-full px-2.5 text-xs font-semibold',
-        role === 'MANAGER' ? 'bg-sunken text-ink-muted' : 'bg-turf-soft text-turf-strong',
-        className,
-      )}
-    >
+    <span className={cn('inline-flex h-6 items-center rounded-pill bg-chip px-2.5 text-xs text-chip-fg', className)}>
       {LABELS[role]}
     </span>
   )

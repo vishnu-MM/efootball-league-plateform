@@ -1,4 +1,4 @@
-import { ChevronsUpDown, LogOut, UserRound } from 'lucide-react'
+import { LogOut, UserRound } from 'lucide-react'
 import { DropdownMenu } from 'radix-ui'
 import type { ReactNode } from 'react'
 import { useMe } from '../../features/auth/useAuth'
@@ -12,25 +12,24 @@ export function UserMenu() {
 
   return (
     <DropdownMenu.Root>
-      <DropdownMenu.Trigger className="flex w-full items-center gap-3 rounded-lg p-2 text-left hover:bg-sunken data-[state=open]:bg-sunken">
-        <Avatar name={me.displayName} />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-semibold">{me.displayName}</span>
-          {me.email && <span className="block truncate text-xs text-ink-muted">{me.email}</span>}
-        </span>
-        <ChevronsUpDown className="size-4 text-ink-muted" aria-hidden />
+      <DropdownMenu.Trigger aria-label={`${me.displayName}: account menu`} className="press rounded-full">
+        <Avatar name={me.displayName} className="size-11" />
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content
-          side="top"
-          align="start"
-          sideOffset={6}
-          className="z-50 min-w-[var(--radix-dropdown-menu-trigger-width)] rounded-xl border border-line bg-surface p-1 shadow-lg"
+          side="right"
+          align="end"
+          sideOffset={14}
+          className="z-50 flex min-w-64 animate-pop flex-col gap-1 rounded-inner bg-surface-dark-2 p-2 text-on-dark"
         >
+          <div className="flex flex-col gap-0.5 px-3 pt-2 pb-3">
+            <span className="truncate font-display text-xl font-semibold uppercase">{me.displayName}</span>
+            {me.email && <span className="truncate text-xs text-on-dark/75">{me.email}</span>}
+          </div>
           <MenuItem onSelect={signOut.navigateToAccount} icon={<UserRound className="size-4" />}>
             Account
           </MenuItem>
-          <DropdownMenu.Separator className="my-1 h-px bg-line" />
+          <DropdownMenu.Separator className="mx-3 my-1 h-px bg-hairline-dark" />
           <MenuItem onSelect={signOut.run} icon={<LogOut className="size-4" />}>
             Sign out
           </MenuItem>
@@ -44,7 +43,7 @@ function MenuItem({ children, icon, onSelect }: { children: string; icon: ReactN
   return (
     <DropdownMenu.Item
       onSelect={onSelect}
-      className="flex h-10 cursor-pointer items-center gap-2.5 rounded-lg px-3 text-sm font-medium outline-none data-[highlighted]:bg-sunken"
+      className="flex h-10 cursor-pointer items-center gap-2.5 rounded-pill px-3 text-[0.8125rem] outline-none data-[highlighted]:bg-hairline-dark"
     >
       {icon}
       {children}

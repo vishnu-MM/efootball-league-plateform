@@ -14,8 +14,9 @@ export default defineConfig({
         name: 'League Platform',
         short_name: 'Leagues',
         description: 'Run custom football leagues with your community.',
-        theme_color: '#1e7a4f',
-        background_color: '#f6f7f4',
+        // --ink from src/tokens.css; the manifest can't reference CSS variables.
+        theme_color: '#1c1c1e',
+        background_color: '#1c1c1e',
         display: 'standalone',
         start_url: '/',
         icons: [{ src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml' }],

@@ -33,10 +33,11 @@ export function useMyLeagues(enabled = true) {
   })
 }
 
-export function useLeague(slug: string) {
+export function useLeague(slug: string, enabled = true) {
   return useQuery({
     queryKey: ['leagues', 'detail', slug],
     queryFn: () => getJson<LeagueDetail>(`/api/public/leagues/${encodeURIComponent(slug)}`),
+    enabled,
   })
 }
 
