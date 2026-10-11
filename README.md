@@ -86,4 +86,21 @@ never edit a migration that has already run.
 - `GET /api/public/leagues/{slug}` — league details (private leagues: members only)
 - `POST /api/leagues` — create a league (you become OWNER)
 - `GET /api/leagues/mine` — leagues you belong to
+
+Members, clubs and invites:
+
+- `GET /api/leagues/{slug}/members` — members with roles and club names (members only)
+- `PUT /api/leagues/{slug}/members/{userId}/role` — make someone an admin or manager (owner only)
+- `DELETE /api/leagues/{slug}/members/{userId}` — remove a member (owner only; not while they're in the active season)
+- `PUT /api/leagues/{slug}/club` — set your club name in this league
+- `GET` / `POST /api/leagues/{slug}/invite`, `POST /api/leagues/{slug}/invite/rotate` — the invite link (owner/admin)
+- `GET /api/public/invites/{code}`, `POST /api/invites/{code}/accept` — preview and join
+
+Seasons, matches and the table:
+
+- `POST /api/leagues/{slug}/seasons` — start a season; creates every fixture (owner/admin)
+- `GET /api/public/leagues/{slug}/season` — active (or latest) season with fixtures and your available actions
+- `GET /api/public/leagues/{slug}/fixtures/{id}` — one match with its score history
+- `POST /api/leagues/{slug}/fixtures/{id}/report` | `confirm` | `dispute` | `resolve` — move a match through reporting
+- `GET /api/public/leagues/{slug}/standings` — the table, recalculated from final results
 - `GET /actuator/health` — health check

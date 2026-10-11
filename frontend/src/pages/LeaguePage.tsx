@@ -1,4 +1,4 @@
-import { CalendarDays, Globe, Lock } from 'lucide-react'
+import { Globe, Lock } from 'lucide-react'
 import { Link, useParams } from 'react-router'
 import { ApiError } from '../api/client'
 import { Bento } from '../components/layout/Page'
@@ -7,11 +7,23 @@ import { Crest } from '../components/ui/Crest'
 import { RoleBadge } from '../components/ui/RoleBadge'
 import { EmptyState, ErrorState, Skeleton } from '../components/ui/States'
 import { Tile } from '../components/ui/Tile'
+import { useMe } from '../features/auth/useAuth'
+import { ClubTile } from '../features/league/ClubTile'
+import { InviteTile } from '../features/league/InviteTile'
+import { MembersTile } from '../features/league/MembersTile'
+import { useMembers } from '../features/league/useInvites'
 import { useLeague } from '../features/league/useLeagues'
+import { FixturesTile } from '../features/match/FixturesTile'
+import { SeasonTile } from '../features/match/SeasonTile'
+import { StandingsTile } from '../features/match/StandingsTile'
+import { useSeason } from '../features/match/useSeason'
 
 export function LeaguePage() {
   const { slug = '' } = useParams()
   const { data: league, isPending, isError, error, refetch } = useLeague(slug)
+  const { data: me } = useMe()
+  const season = useSeason(slug)
+  const members = useMembers(slug, Boolean(league?.myRole))
 
   if (isPending) return <LeagueHeaderSkeleton />
   if (isError) {
@@ -20,6 +32,8 @@ export function LeaguePage() {
   }
 
   const isPublic = league.visibility === 'PUBLIC'
+  const canManage = league.myRole === 'OWNER' || league.myRole === 'ADMIN'
+  const myClub = members.data?.find((m) => m.userId === me?.id)?.clubName ?? null
 
   return (
     <Bento>
@@ -55,14 +69,38 @@ export function LeaguePage() {
         </div>
       </Tile>
 
-      <Tile as="section" aria-labelledby="fixtures-heading" className="flex flex-col gap-5 md:col-span-6 xl:col-span-5">
-        <h2 id="fixtures-heading" className="type-title">
-          Fixtures and table
-        </h2>
-        <EmptyState nested icon={<CalendarDays className="size-6" />} title="No fixtures yet" className="flex-1">
-          Fixtures, results and the league table will appear here once the season is set up.
-        </EmptyState>
-      </Tile>
+      <SeasonTile
+        slug={league.slug}
+        season={season.data}
+        isPending={season.isPending}
+        isError={season.isError}
+        onRetry={() => season.refetch()}
+        canManage={canManage}
+        isMember={Boolean(league.myRole)}
+        viewerId={me?.id}
+        className="md:col-span-6 xl:col-span-5"
+      />
+
+      {season.data && (
+        <>
+          <StandingsTile slug={league.slug} viewerId={me?.id} className="md:col-span-6 xl:col-span-7" />
+          <FixturesTile
+            key={season.data.id}
+            slug={league.slug}
+            season={season.data}
+            viewerId={me?.id}
+            className="md:col-span-6 xl:col-span-5"
+          />
+        </>
+      )}
+
+      {league.myRole && <MembersTile slug={league.slug} isOwner={league.myRole === 'OWNER'} className="md:col-span-6 xl:col-span-7" />}
+      {league.myRole && (
+        <div className="flex flex-col gap-3 md:col-span-6 md:gap-6 xl:col-span-5">
+          <ClubTile key={myClub ?? ''} slug={league.slug} currentName={myClub} />
+          {canManage && <InviteTile slug={league.slug} />}
+        </div>
+      )}
     </Bento>
   )
 }

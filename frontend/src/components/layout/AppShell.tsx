@@ -1,12 +1,13 @@
 import { ArrowLeft, Compass, Home, Plus, UserRound } from 'lucide-react'
 import { Tooltip } from 'radix-ui'
-import type { ComponentType } from 'react'
+import { useEffect, type ComponentType } from 'react'
 import { Link, NavLink, Outlet, useLocation, useMatch, useNavigate } from 'react-router'
 import { useMe } from '../../features/auth/useAuth'
 import { useLeague, useMyLeagues } from '../../features/league/useLeagues'
 import { APP_NAME } from '../../lib/app'
 import { cn } from '../../lib/cn'
 import { initials } from '../../lib/initials'
+import { takeNext } from '../../lib/signInNext'
 import { Button } from '../ui/Button'
 import { Crest } from '../ui/Crest'
 import { Skeleton } from '../ui/States'
@@ -33,6 +34,9 @@ function useCurrentPageLabel() {
   const { data: league } = useLeague(slug ?? '', isLeague)
   if (pathname in PAGE_LABELS) return PAGE_LABELS[pathname]
   if (isLeague) return league?.name ?? ''
+  if (pathname.startsWith('/join/')) return 'Join league'
+  if (/^\/leagues\/[^/]+\/seasons\/new$/.test(pathname)) return 'New season'
+  if (/^\/leagues\/[^/]+\/fixtures\/[^/]+$/.test(pathname)) return 'Match'
   return '404'
 }
 
@@ -218,9 +222,20 @@ function TabBar({ signedIn }: { signedIn: boolean }) {
   )
 }
 
+/** After a Google/Discord round-trip, continue to the page the user was heading to. */
+function useContinueAfterSignIn(signedIn: boolean) {
+  const navigate = useNavigate()
+  useEffect(() => {
+    if (!signedIn) return
+    const next = takeNext()
+    if (next && next !== window.location.pathname) navigate(next, { replace: true })
+  }, [signedIn, navigate])
+}
+
 export function AppShell() {
   const { data: me } = useMe()
   const signedIn = Boolean(me)
+  useContinueAfterSignIn(signedIn)
 
   return (
     <Tooltip.Provider delayDuration={250}>

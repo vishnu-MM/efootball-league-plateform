@@ -8,8 +8,11 @@ import { AppShell } from './components/layout/AppShell'
 import { RequireAuth } from './features/auth/RequireAuth'
 import { AccountPage } from './pages/AccountPage'
 import { CreateLeaguePage } from './pages/CreateLeaguePage'
+import { CreateSeasonPage } from './pages/CreateSeasonPage'
 import { DiscoverPage } from './pages/DiscoverPage'
+import { FixturePage } from './pages/FixturePage'
 import { HomePage } from './pages/HomePage'
+import { JoinPage } from './pages/JoinPage'
 import { LeaguePage } from './pages/LeaguePage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { SignInPage } from './pages/SignInPage'
@@ -34,10 +37,13 @@ const router = createBrowserRouter([
       { path: 'discover', element: <DiscoverPage /> },
       { path: 'signin', element: <SignInPage /> },
       { path: 'leagues/:slug', element: <LeaguePage /> },
+      { path: 'leagues/:slug/fixtures/:id', element: <FixturePage /> },
+      { path: 'join/:code', element: <JoinPage /> },
       {
         element: <RequireAuth />,
         children: [
           { path: 'leagues/new', element: <CreateLeaguePage /> },
+          { path: 'leagues/:slug/seasons/new', element: <CreateSeasonPage /> },
           { path: 'account', element: <AccountPage /> },
         ],
       },

@@ -1,6 +1,7 @@
 package com.leagueapp.league;
 
 import java.io.Serializable;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -20,12 +21,15 @@ class LeagueMembership {
 
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 20)
-	private Role role;
+	private LeagueRole role;
+
+	@Column(name = "joined_at", nullable = false, insertable = false, updatable = false)
+	private OffsetDateTime joinedAt;
 
 	protected LeagueMembership() {
 	}
 
-	LeagueMembership(UUID leagueId, UUID userId, Role role) {
+	LeagueMembership(UUID leagueId, UUID userId, LeagueRole role) {
 		this.key = new Key(leagueId, userId);
 		this.role = role;
 	}
@@ -34,12 +38,20 @@ class LeagueMembership {
 		return key.leagueId;
 	}
 
-	Role getRole() {
+	UUID getUserId() {
+		return key.userId;
+	}
+
+	OffsetDateTime getJoinedAt() {
+		return joinedAt;
+	}
+
+	LeagueRole getRole() {
 		return role;
 	}
 
-	enum Role {
-		OWNER, ADMIN, MANAGER
+	void changeRole(LeagueRole role) {
+		this.role = role;
 	}
 
 	@Embeddable

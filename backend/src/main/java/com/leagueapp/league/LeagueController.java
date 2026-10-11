@@ -68,11 +68,11 @@ class LeagueController {
 
 	}
 
-	record MyLeagueResponse(UUID id, String name, String slug, LeagueMembership.Role role) {
+	record MyLeagueResponse(UUID id, String name, String slug, LeagueRole role) {
 	}
 
 	record LeagueDetailResponse(UUID id, String name, String slug, League.Visibility visibility,
-			LeagueMembership.Role myRole, long memberCount) {
+			LeagueRole myRole, long memberCount) {
 	}
 
 }

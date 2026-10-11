@@ -7,6 +7,7 @@ import { TextField } from '../components/ui/Field'
 import { ErrorState, Skeleton } from '../components/ui/States'
 import { IconTile, Tile } from '../components/ui/Tile'
 import { cn } from '../lib/cn'
+import { rememberNext } from '../lib/signInNext'
 import { useDevLogin, useMe, useProviders } from '../features/auth/useAuth'
 
 const PROVIDERS: Record<string, { label: string; icon: ReactNode }> = {
@@ -48,7 +49,7 @@ export function SignInPage() {
             {oauth.map((provider) => (
               <Button key={provider} asChild variant="secondary" size="lg" className="w-full">
                 {/* Full-page navigation: the server redirects to the provider and back. */}
-                <a href={`/oauth2/authorization/${provider}`}>
+                <a href={`/oauth2/authorization/${provider}`} onClick={() => rememberNext(next)}>
                   {PROVIDERS[provider]?.icon}
                   {PROVIDERS[provider]?.label ?? `Continue with ${provider}`}
                 </a>

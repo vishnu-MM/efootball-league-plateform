@@ -1,7 +1,10 @@
 package com.leagueapp.identity;
 
+import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +39,11 @@ public class IdentityService {
 
 	public Optional<UserSummary> findUser(UUID userId) {
 		return users.findById(userId).map(u -> new UserSummary(u.getId(), u.getDisplayName(), u.getEmail()));
+	}
+
+	/** Display names for the given users, keyed by id (unknown ids are left out). */
+	public Map<UUID, String> displayNames(Collection<UUID> userIds) {
+		return users.findAllById(userIds).stream().collect(Collectors.toMap(AppUser::getId, AppUser::getDisplayName));
 	}
 
 	private static String cleanName(String displayName) {
