@@ -7,6 +7,8 @@ import { ApiError } from './api/client'
 import { AppShell } from './components/layout/AppShell'
 import { RequireAuth } from './features/auth/RequireAuth'
 import { AccountPage } from './pages/AccountPage'
+import { AddCardPage } from './pages/AddCardPage'
+import { ApprovalsPage } from './pages/ApprovalsPage'
 import { CreateLeaguePage } from './pages/CreateLeaguePage'
 import { CreateSeasonPage } from './pages/CreateSeasonPage'
 import { DiscoverPage } from './pages/DiscoverPage'
@@ -16,6 +18,8 @@ import { JoinPage } from './pages/JoinPage'
 import { LeaguePage } from './pages/LeaguePage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { SignInPage } from './pages/SignInPage'
+import { SquadPage } from './pages/SquadPage'
+import { SquadRulesPage } from './pages/SquadRulesPage'
 import './styles.css'
 
 const queryClient = new QueryClient({
@@ -38,12 +42,16 @@ const router = createBrowserRouter([
       { path: 'signin', element: <SignInPage /> },
       { path: 'leagues/:slug', element: <LeaguePage /> },
       { path: 'leagues/:slug/fixtures/:id', element: <FixturePage /> },
+      { path: 'leagues/:slug/squads/:userId', element: <SquadPage /> },
       { path: 'join/:code', element: <JoinPage /> },
       {
         element: <RequireAuth />,
         children: [
           { path: 'leagues/new', element: <CreateLeaguePage /> },
           { path: 'leagues/:slug/seasons/new', element: <CreateSeasonPage /> },
+          { path: 'leagues/:slug/squad/add', element: <AddCardPage /> },
+          { path: 'leagues/:slug/squad/approvals', element: <ApprovalsPage /> },
+          { path: 'leagues/:slug/squad/rules', element: <SquadRulesPage /> },
           { path: 'account', element: <AccountPage /> },
         ],
       },

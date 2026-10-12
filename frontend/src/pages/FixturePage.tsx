@@ -19,6 +19,7 @@ import {
   type Report,
   type ScoreInput,
 } from '../features/match/useSeason'
+import { useMemberSquad, type SquadPlayer } from '../features/roster/useRoster'
 
 export function FixturePage() {
   const { slug = '', id = '' } = useParams()
@@ -139,6 +140,9 @@ function ActionTile({ slug, detail, className }: { slug: string; detail: Fixture
   const { fixture } = detail
   const act = useFixtureAction(slug, fixture.id)
   const [disputing, setDisputing] = useState(false)
+  const homeSquad = useMemberSquad(slug, fixture.home.userId)
+  const awaySquad = useMemberSquad(slug, fixture.away.userId)
+  const squads = { HOME: homeSquad.data?.cards ?? [], AWAY: awaySquad.data?.cards ?? [] }
   const opponentName = fixture.reportedBy === fixture.home.userId ? fixture.away.name : fixture.home.name
   const pending = detail.reports.filter((r) => r.kind === 'REPORT').at(-1)
 
@@ -154,6 +158,7 @@ function ActionTile({ slug, detail, className }: { slug: string; detail: Fixture
         submitLabel="Report score"
         pendingLabel="Reporting…"
         pending={act.isPending}
+        squads={squads}
         onSubmit={(score) => run({ action: 'report', score }, 'Score reported. Waiting for confirmation.')}
       />
     )
@@ -193,6 +198,7 @@ function ActionTile({ slug, detail, className }: { slug: string; detail: Fixture
           submitLabel="Send dispute"
           pendingLabel="Sending…"
           pending={act.isPending}
+          squads={squads}
           onSubmit={(score) => run({ action: 'dispute', score }, 'Dispute sent to the league admins')}
         />
         <Button variant="ghost" className="self-start" onClick={() => setDisputing(false)}>
@@ -201,7 +207,14 @@ function ActionTile({ slug, detail, className }: { slug: string; detail: Fixture
       </div>
     )
   } else if (fixture.actions.includes('RESOLVE')) {
-    body = <Resolve detail={detail} pending={act.isPending} onSubmit={(score) => run({ action: 'resolve', score }, 'Result settled')} />
+    body = (
+      <Resolve
+        detail={detail}
+        squads={squads}
+        pending={act.isPending}
+        onSubmit={(score) => run({ action: 'resolve', score }, 'Result settled')}
+      />
+    )
   } else {
     return null
   }
@@ -226,7 +239,14 @@ function ActionTile({ slug, detail, className }: { slug: string; detail: Fixture
 }
 
 /** Pick either player's version (pre-fills the form), or enter the right score. */
-function Resolve({ detail, pending, onSubmit }: { detail: FixtureDetail; pending: boolean; onSubmit: (score: ScoreInput) => void }) {
+type ResolveProps = {
+  detail: FixtureDetail
+  squads: Record<'HOME' | 'AWAY', SquadPlayer[]>
+  pending: boolean
+  onSubmit: (score: ScoreInput) => void
+}
+
+function Resolve({ detail, squads, pending, onSubmit }: ResolveProps) {
   const { fixture } = detail
   const versions = detail.reports.filter((r) => r.kind !== 'RESOLUTION')
   const [choice, setChoice] = useState(versions.at(-1)?.id ?? '')
@@ -262,6 +282,7 @@ function Resolve({ detail, pending, onSubmit }: { detail: FixtureDetail; pending
         submitLabel="Settle result"
         pendingLabel="Settling…"
         pending={pending}
+        squads={squads}
         onSubmit={onSubmit}
       />
     </div>

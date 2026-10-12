@@ -2,6 +2,7 @@ import { Minus, Plus, X } from 'lucide-react'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Button } from '../../components/ui/Button'
 import { cn } from '../../lib/cn'
+import type { SquadPlayer } from '../roster/useRoster'
 import type { Goal, ScoreInput, Side } from './useSeason'
 
 type ScoreFormProps = {
@@ -13,18 +14,21 @@ type ScoreFormProps = {
   pendingLabel: string
   pending: boolean
   onSubmit: (score: ScoreInput) => void
+  /** Each side's approved cards. A side with cards picks scorers from them; a side without types names. */
+  squads?: Partial<Record<Side, SquadPlayer[]>>
 }
 
 const MAX_GOALS = 99
 
-/** Goals per side with steppers, optional typed scorers (and assists), and an optional note. */
-export function ScoreForm({ homeName, awayName, initial, withNote, submitLabel, pendingLabel, pending, onSubmit }: ScoreFormProps) {
+/** Goals per side with steppers, optional scorers (and assists) picked from squads or typed, and an optional note. */
+export function ScoreForm({ homeName, awayName, initial, withNote, submitLabel, pendingLabel, pending, onSubmit, squads }: ScoreFormProps) {
   const [home, setHome] = useState(initial?.homeGoals ?? 0)
   const [away, setAway] = useState(initial?.awayGoals ?? 0)
   const [goals, setGoals] = useState<Goal[]>(initial?.goals ?? [])
   const [note, setNote] = useState(initial?.note ?? '')
 
   const count = (side: Side) => goals.filter((g) => g.side === side).length
+  const squadOf = (side: Side) => squads?.[side] ?? []
 
   function setSideGoals(side: Side, value: number) {
     const next = Math.max(0, Math.min(MAX_GOALS, value))
@@ -47,7 +51,13 @@ export function ScoreForm({ homeName, awayName, initial, withNote, submitLabel, 
     onSubmit({
       homeGoals: home,
       awayGoals: away,
-      goals: goals.filter((g) => g.scorer.trim()).map((g) => ({ ...g, assist: g.assist?.trim() || null })),
+      goals: goals.flatMap((g): Goal[] => {
+        if (squadOf(g.side).length > 0) {
+          // Picked from the squad: send card ids only (old typed scorers without an id are dropped).
+          return g.scorerCardId ? [{ side: g.side, scorer: g.scorer, assist: null, scorerCardId: g.scorerCardId, assistCardId: g.assistCardId || null }] : []
+        }
+        return g.scorer.trim() ? [{ side: g.side, scorer: g.scorer.trim(), assist: g.assist?.trim() || null }] : []
+      }),
       ...(withNote && note.trim() ? { note: note.trim() } : {}),
     })
   }
@@ -74,22 +84,43 @@ export function ScoreForm({ homeName, awayName, initial, withNote, submitLabel, 
                 <X className="size-4" />
               </button>
             </div>
-            <input
-              aria-label="Scorer"
-              placeholder="Scorer"
-              maxLength={60}
-              value={goal.scorer}
-              onChange={(e) => updateGoal(index, { scorer: e.target.value })}
-              className="h-11 rounded-pill bg-field px-4 text-sm text-field-fg placeholder:text-field-placeholder"
-            />
-            <input
-              aria-label="Assist"
-              placeholder="Assist (optional)"
-              maxLength={60}
-              value={goal.assist ?? ''}
-              onChange={(e) => updateGoal(index, { assist: e.target.value })}
-              className="h-11 rounded-pill bg-field px-4 text-sm text-field-fg placeholder:text-field-placeholder"
-            />
+            {squadOf(goal.side).length > 0 ? (
+              <>
+                <CardPicker
+                  label="Scorer"
+                  empty="Pick the scorer"
+                  cards={squadOf(goal.side)}
+                  value={goal.scorerCardId ?? ''}
+                  onChange={(card) => updateGoal(index, { scorerCardId: card?.squadCardId ?? null, scorer: card?.playerName ?? '' })}
+                />
+                <CardPicker
+                  label="Assist"
+                  empty="No assist"
+                  cards={squadOf(goal.side).filter((c) => c.squadCardId !== goal.scorerCardId)}
+                  value={goal.assistCardId ?? ''}
+                  onChange={(card) => updateGoal(index, { assistCardId: card?.squadCardId ?? null, assist: card?.playerName ?? null })}
+                />
+              </>
+            ) : (
+              <>
+                <input
+                  aria-label="Scorer"
+                  placeholder="Scorer"
+                  maxLength={60}
+                  value={goal.scorer}
+                  onChange={(e) => updateGoal(index, { scorer: e.target.value })}
+                  className="h-11 rounded-pill bg-field px-4 text-sm text-field-fg placeholder:text-field-placeholder"
+                />
+                <input
+                  aria-label="Assist"
+                  placeholder="Assist (optional)"
+                  maxLength={60}
+                  value={goal.assist ?? ''}
+                  onChange={(e) => updateGoal(index, { assist: e.target.value })}
+                  className="h-11 rounded-pill bg-field px-4 text-sm text-field-fg placeholder:text-field-placeholder"
+                />
+              </>
+            )}
           </div>
         ))}
         <div className="flex flex-wrap gap-2">
@@ -128,6 +159,33 @@ export function ScoreForm({ homeName, awayName, initial, withNote, submitLabel, 
         {pending ? pendingLabel : submitLabel}
       </Button>
     </form>
+  )
+}
+
+type CardPickerProps = {
+  label: string
+  empty: string
+  cards: SquadPlayer[]
+  value: string
+  onChange: (card: SquadPlayer | null) => void
+}
+
+/** A native select of a side's approved cards (best rated first). */
+function CardPicker({ label, empty, cards, value, onChange }: CardPickerProps) {
+  return (
+    <select
+      aria-label={label}
+      value={value}
+      onChange={(e) => onChange(cards.find((c) => c.squadCardId === e.target.value) ?? null)}
+      className="h-11 rounded-pill bg-field px-4 text-sm text-field-fg"
+    >
+      <option value="">{empty}</option>
+      {cards.map((card) => (
+        <option key={card.squadCardId} value={card.squadCardId}>
+          {card.playerName} · {card.rating} {card.position}
+        </option>
+      ))}
+    </select>
   )
 }
 

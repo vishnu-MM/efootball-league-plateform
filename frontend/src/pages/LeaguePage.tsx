@@ -17,6 +17,8 @@ import { FixturesTile } from '../features/match/FixturesTile'
 import { SeasonTile } from '../features/match/SeasonTile'
 import { StandingsTile } from '../features/match/StandingsTile'
 import { useSeason } from '../features/match/useSeason'
+import { SquadAdminTile } from '../features/roster/SquadAdminTile'
+import { SquadTile } from '../features/roster/SquadTile'
 
 export function LeaguePage() {
   const { slug = '' } = useParams()
@@ -93,6 +95,9 @@ export function LeaguePage() {
           />
         </>
       )}
+
+      {league.myRole && <SquadTile slug={league.slug} className="md:col-span-6 xl:col-span-7" />}
+      {canManage && <SquadAdminTile slug={league.slug} className="md:col-span-6 xl:col-span-5" />}
 
       {league.myRole && <MembersTile slug={league.slug} isOwner={league.myRole === 'OWNER'} className="md:col-span-6 xl:col-span-7" />}
       {league.myRole && (

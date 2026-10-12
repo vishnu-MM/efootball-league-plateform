@@ -38,7 +38,14 @@ export type Season = {
   canManage: boolean
 }
 
-export type Goal = { side: Side; scorer: string; assist: string | null }
+/** A scorer. With squads, the card ids point at approved squad cards and the names are their player names. */
+export type Goal = {
+  side: Side
+  scorer: string
+  assist: string | null
+  scorerCardId?: string | null
+  assistCardId?: string | null
+}
 
 export type Report = {
   id: string

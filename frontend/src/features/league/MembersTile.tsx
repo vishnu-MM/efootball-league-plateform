@@ -1,6 +1,7 @@
 import { MoreHorizontal, ShieldCheck, UserMinus, UserRound, Users } from 'lucide-react'
 import { DropdownMenu } from 'radix-ui'
 import { useState, type ReactNode } from 'react'
+import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { Avatar } from '../../components/ui/Avatar'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
@@ -62,10 +63,10 @@ export function MembersTile({ slug, isOwner, className }: { slug: string; isOwne
               <li key={member.userId} className="flex items-center gap-3 py-3">
                 <Avatar name={member.displayName} className={cn('size-10', !isMe && 'bg-tile-soft')} />
                 <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate text-sm">
+                  <Link to={`/leagues/${slug}/squads/${member.userId}`} className="truncate text-sm hover:underline">
                     {member.displayName}
                     {isMe && <span className="ml-2 text-xs text-tile-muted">(you)</span>}
-                  </span>
+                  </Link>
                   {member.clubName && <span className="truncate text-xs text-tile-muted">{member.clubName}</span>}
                 </span>
                 <RoleBadge role={member.role} />

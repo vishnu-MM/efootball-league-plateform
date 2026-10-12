@@ -37,6 +37,10 @@ function useCurrentPageLabel() {
   if (pathname.startsWith('/join/')) return 'Join league'
   if (/^\/leagues\/[^/]+\/seasons\/new$/.test(pathname)) return 'New season'
   if (/^\/leagues\/[^/]+\/fixtures\/[^/]+$/.test(pathname)) return 'Match'
+  if (/^\/leagues\/[^/]+\/squad\/add$/.test(pathname)) return 'Add card'
+  if (/^\/leagues\/[^/]+\/squad\/approvals$/.test(pathname)) return 'Approvals'
+  if (/^\/leagues\/[^/]+\/squad\/rules$/.test(pathname)) return 'Squad rules'
+  if (/^\/leagues\/[^/]+\/squads\/[^/]+$/.test(pathname)) return 'Squad'
   return '404'
 }
 
