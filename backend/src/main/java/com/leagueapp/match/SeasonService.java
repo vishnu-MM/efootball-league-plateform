@@ -21,6 +21,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.leagueapp.league.LeagueService;
 import com.leagueapp.league.LeagueService.LeagueAccess;
+import com.leagueapp.roster.Squads;
 
 @Service
 @Transactional(readOnly = true)
@@ -34,15 +35,17 @@ class SeasonService {
 	private final FixtureRepository fixtures;
 	private final ScoreReportRepository reports;
 	private final TeamNames teamNames;
+	private final Squads squads;
 
 	SeasonService(LeagueService leagueService, SeasonRepository seasons, SeasonParticipantRepository participants,
-			FixtureRepository fixtures, ScoreReportRepository reports, TeamNames teamNames) {
+			FixtureRepository fixtures, ScoreReportRepository reports, TeamNames teamNames, Squads squads) {
 		this.leagueService = leagueService;
 		this.seasons = seasons;
 		this.participants = participants;
 		this.fixtures = fixtures;
 		this.reports = reports;
 		this.teamNames = teamNames;
+		this.squads = squads;
 	}
 
 	/** Creates the season and its whole fixture list. Owners and admins only; one active season per league. */
@@ -62,6 +65,7 @@ class SeasonService {
 		if (request.pointsDraw() > request.pointsWin()) {
 			throw badRequest("A draw can't be worth more than a win");
 		}
+		requireLegalSquads(league.leagueId(), players);
 
 		int number = seasons.maxNumber(league.leagueId()) + 1;
 		String name = request.name() == null || request.name().isBlank() ? "Season " + number : request.name().strip();
@@ -80,7 +84,22 @@ class SeasonService {
 		fixtures.saveAll(FixtureGenerator.roundRobin(order, request.format() == Season.Format.HOME_AND_AWAY).stream()
 			.map(p -> new Fixture(season.getId(), p.round(), p.home(), p.away(), season.playBy(p.round())))
 			.toList());
+		squads.closeWindow(league.leagueId());
 		return season;
+	}
+
+	/** Every player's squad must follow the league's rules before they can play. */
+	private void requireLegalSquads(UUID leagueId, List<UUID> players) {
+		Map<UUID, List<String>> problems = squads.problems(leagueId, players);
+		if (!problems.isEmpty()) {
+			Map<UUID, String> names = teamNames.of(leagueId, problems.keySet());
+			String who = problems.keySet().stream()
+				.map(id -> names.getOrDefault(id, "Player"))
+				.sorted()
+				.collect(Collectors.joining(", "));
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"These squads break the squad rules and need fixing first: " + who);
+		}
 	}
 
 	/** The active season, or the latest finished one, with every fixture and what the viewer may do with each. */

@@ -116,10 +116,14 @@ class ScoreReport {
 		HOME, AWAY
 	}
 
-	/** A scorer (and optional assist) for one side. Names are typed until squads exist. */
+	/**
+	 * A scorer (and optional assist) for one side. With squads, the card ids point at the squad cards and the names
+	 * are a snapshot of their player names; without, the names were typed and the ids are null.
+	 */
 	@Embeddable
 	record Goal(@Enumerated(EnumType.STRING) @Column(nullable = false, length = 4) Side side,
-			@Column(nullable = false, length = NAME_MAX) String scorer, @Column(length = NAME_MAX) String assist) {
+			@Column(nullable = false, length = NAME_MAX) String scorer, @Column(length = NAME_MAX) String assist,
+			@Column(name = "scorer_card_id") UUID scorerCardId, @Column(name = "assist_card_id") UUID assistCardId) {
 	}
 
 }

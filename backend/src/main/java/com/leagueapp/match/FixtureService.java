@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -14,6 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.leagueapp.league.LeagueService;
 import com.leagueapp.league.LeagueService.LeagueAccess;
+import com.leagueapp.roster.Squads;
 
 /** One fixture's details, and moving it through report → confirm, or report → dispute → resolve. */
 @Service
@@ -25,14 +27,16 @@ class FixtureService {
 	private final FixtureRepository fixtures;
 	private final ScoreReportRepository reports;
 	private final TeamNames teamNames;
+	private final Squads squads;
 
 	FixtureService(LeagueService leagueService, SeasonRepository seasons, FixtureRepository fixtures,
-			ScoreReportRepository reports, TeamNames teamNames) {
+			ScoreReportRepository reports, TeamNames teamNames, Squads squads) {
 		this.leagueService = leagueService;
 		this.seasons = seasons;
 		this.fixtures = fixtures;
 		this.reports = reports;
 		this.teamNames = teamNames;
+		this.squads = squads;
 	}
 
 	FixtureDetail detail(String slug, UUID fixtureId, UUID viewerId) {
@@ -58,7 +62,7 @@ class FixtureService {
 	@Transactional
 	void report(String slug, UUID fixtureId, UUID actorId, ScoreInput score) {
 		Locked locked = lockFor(slug, fixtureId, actorId, ResultRules.Action.REPORT);
-		reports.save(newReport(locked.fixture(), ScoreReport.Kind.REPORT, actorId, score));
+		reports.save(newReport(locked, ScoreReport.Kind.REPORT, actorId, score));
 		locked.fixture().markReported();
 	}
 
@@ -74,7 +78,7 @@ class FixtureService {
 	@Transactional
 	void dispute(String slug, UUID fixtureId, UUID actorId, ScoreInput score) {
 		Locked locked = lockFor(slug, fixtureId, actorId, ResultRules.Action.DISPUTE);
-		reports.save(newReport(locked.fixture(), ScoreReport.Kind.DISPUTE, actorId, score));
+		reports.save(newReport(locked, ScoreReport.Kind.DISPUTE, actorId, score));
 		locked.fixture().markDisputed();
 	}
 
@@ -82,7 +86,7 @@ class FixtureService {
 	@Transactional
 	void resolve(String slug, UUID fixtureId, UUID actorId, ScoreInput score) {
 		Locked locked = lockFor(slug, fixtureId, actorId, ResultRules.Action.RESOLVE);
-		ScoreReport resolution = reports.save(newReport(locked.fixture(), ScoreReport.Kind.RESOLUTION, actorId, score));
+		ScoreReport resolution = reports.save(newReport(locked, ScoreReport.Kind.RESOLUTION, actorId, score));
 		locked.fixture().finalizeWith(resolution, actorId);
 		completeSeasonIfDone(locked.season());
 	}
@@ -115,6 +119,7 @@ class FixtureService {
 	private void completeSeasonIfDone(Season season) {
 		if (season.isActive() && !fixtures.existsBySeasonIdAndStatusNot(season.getId(), Fixture.Status.CONFIRMED)) {
 			season.complete();
+			squads.openWindow(season.getLeagueId());
 		}
 	}
 
@@ -139,10 +144,21 @@ class FixtureService {
 		return latest;
 	}
 
-	private static ScoreReport newReport(Fixture fixture, ScoreReport.Kind kind, UUID actorId, ScoreInput score) {
-		score.validate();
+	private ScoreReport newReport(Locked locked, ScoreReport.Kind kind, UUID actorId, ScoreInput score) {
+		Fixture fixture = locked.fixture();
+		UUID leagueId = locked.season().getLeagueId();
+		Map<ScoreReport.Side, Map<UUID, String>> sideSquads = Map.of(
+				ScoreReport.Side.HOME, squadNames(leagueId, fixture.getHomeUserId()),
+				ScoreReport.Side.AWAY, squadNames(leagueId, fixture.getAwayUserId()));
+		List<ScoreReport.Goal> goals = score.validGoals(sideSquads);
 		return new ScoreReport(fixture.getId(), kind, actorId, score.homeGoals(), score.awayGoals(), score.cleanNote(),
-				score.cleanGoals());
+				goals);
+	}
+
+	/** A player's approved squad cards: squad card id → player name. */
+	private Map<UUID, String> squadNames(UUID leagueId, UUID userId) {
+		return squads.approvedCards(leagueId, userId).stream()
+			.collect(Collectors.toMap(Squads.SquadPlayer::squadCardId, Squads.SquadPlayer::playerName));
 	}
 
 	private static ResponseStatusException notFound() {

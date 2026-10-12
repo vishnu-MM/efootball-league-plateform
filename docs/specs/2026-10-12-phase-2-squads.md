@@ -8,7 +8,7 @@
 |---|---|
 | Card data | Entered by managers: player name, card type, rating (40–110), position. No outside data source and no screenshots (uploads are Phase 3). |
 | Catalogue | One per league. A card entered once can be picked from search by other managers. Search only shows cards that have been approved at least once, so typos don't spread. |
-| Approval | Every card a manager adds starts **pending**. An owner or admin approves or rejects it (with an optional reason). |
+| Approval | Every card a manager adds starts **pending**. An owner or admin approves or rejects it (with an optional reason). Owners and admins can approve their own cards, since a league may have only one. |
 | Duplicates | Several managers can own the same card. A manager can't hold the same card twice. |
 | Squad rules | Per league: max squad size, banned card types, and a rating cap. The owner picks the cap type: none, **max per card**, **squad total**, or **top-11 total** (the 11 highest ratings, positions ignored). |
 | Enforcement | Adding a card that would break a rule is refused with the reason. Pending and approved cards both count. |

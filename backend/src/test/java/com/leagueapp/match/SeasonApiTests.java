@@ -163,6 +163,46 @@ class SeasonApiTests {
 	}
 
 	@Test
+	void scorersComeFromApprovedSquadCards() throws Exception {
+		User owner = api.login("Scorer Owner");
+		User ann = api.login("Scorer Ann");
+		String slug = api.createLeague(owner, "Scorer Cup", "PUBLIC");
+		api.join(owner, slug, ann);
+		String messi = addCard(slug, ann, "Lionel Messi", 98);
+		String pedri = addCard(slug, ann, "Pedri", 88);
+		String pending = addCard(slug, ann, "Not Yet", 80);
+		String ownerCard = addCard(slug, owner, "Owner Striker", 85);
+		for (String card : List.of(messi, pedri, ownerCard)) {
+			api.send(post("/api/leagues/" + slug + "/squad/cards/" + card + "/approve"), owner, null)
+				.andExpect(status().isNoContent());
+		}
+		createSeason(owner, slug, List.of(owner, ann), "SINGLE", null).andExpect(status().isCreated());
+		String id = fixtureBetween(slug, ann, owner, ann);
+
+		// Ann's side has a squad: typed names, pending cards and the owner's cards are all refused.
+		report(slug, id, ann, ann, owner, 1, 0, "{\"side\":\"%s\",\"scorer\":\"Messi\"}").andExpect(status().isBadRequest());
+		report(slug, id, ann, ann, owner, 1, 0, "{\"side\":\"%s\",\"scorerCardId\":\"" + pending + "\"}")
+			.andExpect(status().isBadRequest());
+		report(slug, id, ann, ann, owner, 1, 0, "{\"side\":\"%s\",\"scorerCardId\":\"" + ownerCard + "\"}")
+			.andExpect(status().isBadRequest());
+
+		report(slug, id, ann, ann, owner, 1, 0,
+				"{\"side\":\"%s\",\"scorerCardId\":\"" + messi + "\",\"assistCardId\":\"" + pedri + "\"}")
+			.andExpect(status().isNoContent());
+		api.get(detailPath(slug, id), ann)
+			.andExpect(jsonPath("$.reports[0].goals[0].scorer").value("Lionel Messi"))
+			.andExpect(jsonPath("$.reports[0].goals[0].assist").value("Pedri"))
+			.andExpect(jsonPath("$.reports[0].goals[0].scorerCardId").value(messi));
+	}
+
+	private String addCard(String slug, User user, String name, int rating) throws Exception {
+		return JsonPath.read(api.send(post("/api/leagues/" + slug + "/squad/cards"), user, "{\"playerName\":\"" + name
+				+ "\",\"cardType\":\"STANDARD\",\"rating\":" + rating + ",\"position\":\"CF\"}")
+			.andExpect(status().isCreated())
+			.andReturn().getResponse().getContentAsString(), "$.id");
+	}
+
+	@Test
 	void seasonIsNullBeforeTheFirstOne() throws Exception {
 		User owner = api.login("Empty Owner");
 		String slug = api.createLeague(owner, "Empty Cup", "PUBLIC");
