@@ -103,4 +103,14 @@ Seasons, matches and the table:
 - `GET /api/public/leagues/{slug}/fixtures/{id}` — one match with its score history
 - `POST /api/leagues/{slug}/fixtures/{id}/report` | `confirm` | `dispute` | `resolve` — move a match through reporting
 - `GET /api/public/leagues/{slug}/standings` — the table, recalculated from final results
+
+Squads (cards, approvals, rules and the transfer window):
+
+- `GET /api/leagues/{slug}/roster` — rules, window, your squad and flagged squads (members)
+- `GET /api/leagues/{slug}/cards?q=` — search the league's approved card catalogue
+- `POST /api/leagues/{slug}/squad/cards`, `DELETE …/squad/cards/{id}` — add (pending) or remove your card
+- `GET /api/leagues/{slug}/squad/approvals`, `POST …/squad/cards/{id}/approve` | `reject` — approve cards (owner/admin)
+- `PUT /api/leagues/{slug}/squad-rules`, `POST …/squad-rules/check` — set the rules, or preview who they flag (owner)
+- `PUT /api/leagues/{slug}/transfer-window` — open or close the window (owner/admin)
+- `GET /api/public/leagues/{slug}/squads/{userId}` — a member's approved squad
 - `GET /actuator/health` — health check
