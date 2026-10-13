@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,10 +22,12 @@ public class Squads {
 
 	private final SquadCardRepository squadCards;
 	private final SquadRulesRepository rules;
+	private final ApplicationEventPublisher events;
 
-	Squads(SquadCardRepository squadCards, SquadRulesRepository rules) {
+	Squads(SquadCardRepository squadCards, SquadRulesRepository rules, ApplicationEventPublisher events) {
 		this.squadCards = squadCards;
 		this.rules = rules;
+		this.events = events;
 	}
 
 	/** The member's approved cards, best rated first: what match reports pick scorers and assists from. */
@@ -35,6 +38,13 @@ public class Squads {
 			.map(SquadPlayer::of)
 			.sorted((a, b) -> Integer.compare(b.rating(), a.rating()))
 			.toList();
+	}
+
+	/** Card details for these squad cards, removed ones included (goals keep pointing at them): id → card. */
+	public Map<UUID, SquadPlayer> cardsById(Collection<UUID> squadCardIds) {
+		Map<UUID, SquadPlayer> found = new HashMap<>();
+		squadCards.findAllById(squadCardIds).forEach(c -> found.put(c.getId(), SquadPlayer.of(c)));
+		return found;
 	}
 
 	/** For each of these members whose squad breaks the league's rules, what is wrong. */
@@ -51,16 +61,26 @@ public class Squads {
 		return problems;
 	}
 
-	/** A season ended (or an admin opened it): squads can change. */
+	/** A season ended: squads can change. */
 	@Transactional
 	public void openWindow(UUID leagueId) {
-		lock(leagueId).setWindowOpen(true);
+		setWindow(leagueId, null, true);
 	}
 
-	/** A season started (or an admin closed it): squads are fixed. */
+	/** A season started: squads are fixed. */
 	@Transactional
 	public void closeWindow(UUID leagueId) {
-		lock(leagueId).setWindowOpen(false);
+		setWindow(leagueId, null, false);
+	}
+
+	/** Opens or closes the window; announces it only if that changed anything. {@code actorId} null: automatic. */
+	@Transactional
+	void setWindow(UUID leagueId, UUID actorId, boolean open) {
+		SquadRules current = lock(leagueId);
+		if (current.isWindowOpen() != open) {
+			current.setWindowOpen(open);
+			events.publishEvent(new RosterEvents.TransferWindowChanged(leagueId, actorId, open));
+		}
 	}
 
 	/** The league's rules, or the defaults if it has never saved any. */

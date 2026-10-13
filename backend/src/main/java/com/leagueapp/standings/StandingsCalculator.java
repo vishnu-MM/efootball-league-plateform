@@ -14,8 +14,8 @@ import java.util.stream.Collectors;
 import com.leagueapp.match.MatchResults.FinalResult;
 
 /**
- * Builds a league table from final results. Order: points, goal difference, goals scored, then points from the
- * matches between the tied teams only (head-to-head), then name.
+ * Builds a league table from final results. Points are after deductions. Order: points, goal difference, goals
+ * scored, then points from the matches between the tied teams only (head-to-head, before deductions), then name.
  */
 final class StandingsCalculator {
 
@@ -24,7 +24,13 @@ final class StandingsCalculator {
 
 	static List<Row> table(Collection<UUID> players, Map<UUID, String> names, List<FinalResult> results, int pointsWin,
 			int pointsDraw) {
-		Map<UUID, Row> rows = tally(players, names, results, pointsWin, pointsDraw);
+		return table(players, names, results, pointsWin, pointsDraw, Map.of());
+	}
+
+	/** @param deducted points taken from each player (players without deductions can be left out) */
+	static List<Row> table(Collection<UUID> players, Map<UUID, String> names, List<FinalResult> results, int pointsWin,
+			int pointsDraw, Map<UUID, Integer> deducted) {
+		Map<UUID, Row> rows = tally(players, names, results, pointsWin, pointsDraw, deducted);
 
 		// Group by the main criteria; within a tied group, break ties with a mini-table of their own matches.
 		Comparator<Row> main = Comparator.comparingInt(Row::points)
@@ -46,7 +52,7 @@ final class StandingsCalculator {
 			List<FinalResult> between = results.stream()
 				.filter(r -> tied.contains(r.homeId()) && tied.contains(r.awayId()))
 				.toList();
-			Map<UUID, Row> mini = tally(tied, names, between, pointsWin, pointsDraw);
+			Map<UUID, Row> mini = tally(tied, names, between, pointsWin, pointsDraw, Map.of());
 			group.stream()
 				.sorted(Comparator.comparingInt((Row r) -> mini.get(r.userId()).points())
 					.reversed()
@@ -57,7 +63,7 @@ final class StandingsCalculator {
 	}
 
 	private static Map<UUID, Row> tally(Collection<UUID> players, Map<UUID, String> names, List<FinalResult> results,
-			int pointsWin, int pointsDraw) {
+			int pointsWin, int pointsDraw, Map<UUID, Integer> deducted) {
 		Map<UUID, int[]> stats = new HashMap<>(); // played, won, drawn, lost, for, against
 		players.forEach(p -> stats.put(p, new int[6]));
 		for (FinalResult r : results) {
@@ -70,8 +76,11 @@ final class StandingsCalculator {
 			record(away, r.awayGoals(), r.homeGoals());
 		}
 		Map<UUID, Row> rows = new LinkedHashMap<>();
-		stats.forEach((id, s) -> rows.put(id, new Row(id, names.getOrDefault(id, "Player"), s[0], s[1], s[2], s[3],
-				s[4], s[5], s[4] - s[5], s[1] * pointsWin + s[2] * pointsDraw)));
+		stats.forEach((id, s) -> {
+			int minus = deducted.getOrDefault(id, 0);
+			rows.put(id, new Row(id, names.getOrDefault(id, "Player"), s[0], s[1], s[2], s[3], s[4], s[5], s[4] - s[5],
+					minus, s[1] * pointsWin + s[2] * pointsDraw - minus));
+		});
 		return rows;
 	}
 
@@ -91,7 +100,7 @@ final class StandingsCalculator {
 	}
 
 	record Row(UUID userId, String name, int played, int won, int drawn, int lost, int goalsFor, int goalsAgainst,
-			int goalDifference, int points) {
+			int goalDifference, int deducted, int points) {
 	}
 
 }

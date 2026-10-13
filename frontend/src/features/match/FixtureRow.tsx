@@ -9,9 +9,13 @@ const STATUS: Record<string, { label: string; dot: string } | undefined> = {
 
 /** Fixture state as an ink pill with a coloured dot; readable on any tile. */
 export function StatusChip({ fixture, className }: { fixture: FixtureSummary; className?: string }) {
-  const status = fixture.decidedByAdmin
-    ? { label: 'Decided by an admin', dot: 'bg-aqua' }
-    : STATUS[fixture.status]
+  const status = fixture.forfeit
+    ? { label: 'Forfeit', dot: 'bg-coral' }
+    : fixture.overridden
+      ? { label: 'Overridden', dot: 'bg-violet' }
+      : fixture.decidedByAdmin
+        ? { label: 'Decided by an admin', dot: 'bg-aqua' }
+        : STATUS[fixture.status]
   if (!status) return null
   return (
     <span className={cn('inline-flex h-6 items-center gap-1.5 rounded-pill bg-ink px-2.5 text-[0.6875rem] text-on-dark', className)}>

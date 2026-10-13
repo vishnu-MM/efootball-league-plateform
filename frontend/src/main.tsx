@@ -11,15 +11,19 @@ import { AddCardPage } from './pages/AddCardPage'
 import { ApprovalsPage } from './pages/ApprovalsPage'
 import { CreateLeaguePage } from './pages/CreateLeaguePage'
 import { CreateSeasonPage } from './pages/CreateSeasonPage'
+import { DiscordSettingsPage } from './pages/DiscordSettingsPage'
 import { DiscoverPage } from './pages/DiscoverPage'
 import { FixturePage } from './pages/FixturePage'
 import { HomePage } from './pages/HomePage'
 import { JoinPage } from './pages/JoinPage'
 import { LeaguePage } from './pages/LeaguePage'
+import { LogPage } from './pages/LogPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { NotificationsPage } from './pages/NotificationsPage'
 import { SignInPage } from './pages/SignInPage'
 import { SquadPage } from './pages/SquadPage'
 import { SquadRulesPage } from './pages/SquadRulesPage'
+import { StatsPage } from './pages/StatsPage'
 import './styles.css'
 
 const queryClient = new QueryClient({
@@ -43,6 +47,8 @@ const router = createBrowserRouter([
       { path: 'leagues/:slug', element: <LeaguePage /> },
       { path: 'leagues/:slug/fixtures/:id', element: <FixturePage /> },
       { path: 'leagues/:slug/squads/:userId', element: <SquadPage /> },
+      { path: 'leagues/:slug/log', element: <LogPage /> },
+      { path: 'leagues/:slug/stats', element: <StatsPage /> },
       { path: 'join/:code', element: <JoinPage /> },
       {
         element: <RequireAuth />,
@@ -52,7 +58,9 @@ const router = createBrowserRouter([
           { path: 'leagues/:slug/squad/add', element: <AddCardPage /> },
           { path: 'leagues/:slug/squad/approvals', element: <ApprovalsPage /> },
           { path: 'leagues/:slug/squad/rules', element: <SquadRulesPage /> },
+          { path: 'leagues/:slug/settings/discord', element: <DiscordSettingsPage /> },
           { path: 'account', element: <AccountPage /> },
+          { path: 'notifications', element: <NotificationsPage /> },
         ],
       },
       { path: '*', element: <NotFoundPage /> },

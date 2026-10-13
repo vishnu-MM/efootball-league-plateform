@@ -53,6 +53,13 @@ class Fixture {
 	@Column(name = "finalized_at")
 	private OffsetDateTime finalizedAt;
 
+	@Enumerated(EnumType.STRING)
+	@Column(length = 4)
+	private Forfeit forfeit;
+
+	@Column(nullable = false)
+	private boolean overridden;
+
 	protected Fixture() {
 	}
 
@@ -82,6 +89,20 @@ class Fixture {
 		this.finalReportId = report.getId();
 		this.resolvedBy = resolvedBy;
 		this.finalizedAt = OffsetDateTime.now();
+	}
+
+	/** An admin replaces the final result. It no longer counts as a forfeit, if it was one. */
+	void overrideWith(ScoreReport report, UUID adminId) {
+		finalizeWith(report, adminId);
+		this.forfeit = null;
+		this.overridden = true;
+	}
+
+	/** An admin settles the fixture as forfeited by one side or both. */
+	void forfeitWith(ScoreReport report, UUID adminId, Forfeit who) {
+		finalizeWith(report, adminId);
+		this.forfeit = who;
+		this.overridden = false;
 	}
 
 	boolean involves(UUID userId) {
@@ -132,8 +153,21 @@ class Fixture {
 		return resolvedBy;
 	}
 
+	Forfeit getForfeit() {
+		return forfeit;
+	}
+
+	boolean isOverridden() {
+		return overridden;
+	}
+
 	enum Status {
 		SCHEDULED, AWAITING_CONFIRMATION, DISPUTED, CONFIRMED
+	}
+
+	/** Which side forfeited. */
+	enum Forfeit {
+		HOME, AWAY, BOTH
 	}
 
 }

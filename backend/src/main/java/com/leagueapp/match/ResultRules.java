@@ -11,8 +11,10 @@ import java.util.UUID;
  * <li>Awaiting confirmation: the opponent confirms or disputes; an owner or admin (other than the reporter) can
  * confirm on the opponent's behalf. Nothing is ever confirmed automatically.</li>
  * <li>Disputed: an owner or admin resolves it.</li>
- * <li>Confirmed: final.</li>
+ * <li>Confirmed: final, except that an owner or admin can override it or record a forfeit while the season is
+ * active.</li>
  * </ul>
+ * An owner or admin can record a forfeit on any fixture that isn't final yet.
  */
 final class ResultRules {
 
@@ -20,7 +22,7 @@ final class ResultRules {
 	}
 
 	static Set<Action> allowed(Fixture.Status status, UUID viewerId, UUID homeId, UUID awayId, UUID reporterId,
-			boolean viewerCanManage) {
+			boolean viewerCanManage, boolean seasonActive) {
 		Set<Action> actions = EnumSet.noneOf(Action.class);
 		if (viewerId == null) {
 			return actions;
@@ -32,6 +34,11 @@ final class ResultRules {
 			case SCHEDULED -> {
 				if (isPlayer) {
 					actions.add(Action.REPORT);
+				}
+			}
+			case CONFIRMED -> {
+				if (viewerCanManage && seasonActive) {
+					actions.add(Action.OVERRIDE);
 				}
 			}
 			case AWAITING_CONFIRMATION -> {
@@ -48,14 +55,15 @@ final class ResultRules {
 					actions.add(Action.RESOLVE);
 				}
 			}
-			case CONFIRMED -> {
-			}
+		}
+		if (viewerCanManage && seasonActive) {
+			actions.add(Action.FORFEIT);
 		}
 		return actions;
 	}
 
 	enum Action {
-		REPORT, CONFIRM, DISPUTE, RESOLVE
+		REPORT, CONFIRM, DISPUTE, RESOLVE, OVERRIDE, FORFEIT
 	}
 
 }

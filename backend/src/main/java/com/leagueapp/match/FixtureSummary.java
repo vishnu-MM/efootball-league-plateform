@@ -10,10 +10,11 @@ import java.util.UUID;
  * confirmation, and empty otherwise; {@code actions} are what this viewer may do now.
  */
 record FixtureSummary(UUID id, int round, LocalDate playBy, Fixture.Status status, Side home, Side away,
-		Integer homeGoals, Integer awayGoals, UUID reportedBy, boolean decidedByAdmin, Set<ResultRules.Action> actions) {
+		Integer homeGoals, Integer awayGoals, UUID reportedBy, boolean decidedByAdmin, Fixture.Forfeit forfeit,
+		boolean overridden, Set<ResultRules.Action> actions) {
 
 	static FixtureSummary of(Fixture f, Map<UUID, String> names, ScoreReport pendingReport, UUID viewerId,
-			boolean viewerCanManage) {
+			boolean viewerCanManage, boolean seasonActive) {
 		Integer home = f.getHomeGoals();
 		Integer away = f.getAwayGoals();
 		UUID reporter = null;
@@ -25,8 +26,8 @@ record FixtureSummary(UUID id, int round, LocalDate playBy, Fixture.Status statu
 		return new FixtureSummary(f.getId(), f.getRound(), f.getPlayBy(), f.getStatus(),
 				new Side(f.getHomeUserId(), names.getOrDefault(f.getHomeUserId(), "Player")),
 				new Side(f.getAwayUserId(), names.getOrDefault(f.getAwayUserId(), "Player")), home, away, reporter,
-				f.getResolvedBy() != null, ResultRules.allowed(f.getStatus(), viewerId, f.getHomeUserId(),
-						f.getAwayUserId(), reporter, viewerCanManage));
+				f.getResolvedBy() != null, f.getForfeit(), f.isOverridden(), ResultRules.allowed(f.getStatus(), viewerId,
+						f.getHomeUserId(), f.getAwayUserId(), reporter, viewerCanManage, seasonActive));
 	}
 
 	record Side(UUID userId, String name) {

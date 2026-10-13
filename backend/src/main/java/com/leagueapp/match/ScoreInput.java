@@ -3,6 +3,7 @@ package com.leagueapp.match;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -12,9 +13,24 @@ import org.springframework.web.server.ResponseStatusException;
  * A score as entered: goals per side, optional scorers (with optional assists), optional note. A side whose manager
  * has approved squad cards picks scorers from them by id; a side without one types names.
  */
-record ScoreInput(int homeGoals, int awayGoals, List<GoalInput> goals, String note) {
+record ScoreInput(int homeGoals, int awayGoals, List<GoalInput> goals, String note, MvpInput mvp,
+		List<UUID> evidence) {
 
 	static final int MAX_GOALS = 99;
+
+	static final int MAX_EVIDENCE = 3;
+
+	/** Screenshot upload ids, without duplicates; at most three. */
+	List<UUID> cleanEvidence() {
+		if (evidence == null) {
+			return List.of();
+		}
+		List<UUID> ids = evidence.stream().filter(Objects::nonNull).distinct().toList();
+		if (ids.size() > MAX_EVIDENCE) {
+			throw badRequest("Add up to " + MAX_EVIDENCE + " screenshots");
+		}
+		return ids;
+	}
 
 	/**
 	 * Checks the score and turns the scorers into goals to store.
@@ -45,6 +61,28 @@ record ScoreInput(int homeGoals, int awayGoals, List<GoalInput> goals, String no
 			throw badRequest("Keep the note under " + ScoreReport.NOTE_MAX + " characters");
 		}
 		return clean;
+	}
+
+	/**
+	 * The MVP, if one was picked: from that side's squad when it has one, else a typed name. Blank means none.
+	 * @param squads each side's approved cards (squad card id → player name); empty for a side that types names
+	 */
+	ScoreReport.Mvp validMvp(Map<ScoreReport.Side, Map<UUID, String>> squads) {
+		if (mvp == null || mvp.side() == null || (mvp.cardId() == null && blank(mvp.name()))) {
+			return null;
+		}
+		Map<UUID, String> squad = squads.getOrDefault(mvp.side(), Map.of());
+		if (squad.isEmpty()) {
+			if (mvp.cardId() != null) {
+				throw badRequest("That side has no approved squad yet, so type the MVP's name");
+			}
+			return new ScoreReport.Mvp(mvp.side(), trim(mvp.name()), null);
+		}
+		String name = mvp.cardId() == null ? null : squad.get(mvp.cardId());
+		if (name == null) {
+			throw badRequest("The MVP must be an approved card in that side's squad");
+		}
+		return new ScoreReport.Mvp(mvp.side(), trim(name), mvp.cardId());
 	}
 
 	String cleanNote() {
@@ -94,6 +132,10 @@ record ScoreInput(int homeGoals, int awayGoals, List<GoalInput> goals, String no
 
 	private static ResponseStatusException badRequest(String message) {
 		return new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
+	}
+
+	/** The MVP: a squad card id, or a typed name for a side without a squad. */
+	record MvpInput(ScoreReport.Side side, UUID cardId, String name) {
 	}
 
 	/** A scorer: a squad card id (with an optional assisting card), or a typed name for a side without a squad. */

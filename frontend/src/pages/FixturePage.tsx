@@ -9,9 +9,12 @@ import { Button } from '../components/ui/Button'
 import { EmptyState, ErrorState, Skeleton } from '../components/ui/States'
 import { IconTile, Tile } from '../components/ui/Tile'
 import { useMe } from '../features/auth/useAuth'
+import { Thumbnail } from '../features/files/Thumbnail'
+import { CorrectionsTile } from '../features/match/CorrectionsTile'
 import { ScoreText, StatusChip } from '../features/match/FixtureRow'
 import { ScoreForm } from '../features/match/ScoreForm'
 import {
+  evidenceSrc,
   formatPlayBy,
   useFixture,
   useFixtureAction,
@@ -72,6 +75,7 @@ export function FixturePage() {
       </Tile>
 
       <ActionTile slug={slug} detail={data} className="md:col-span-6 xl:col-span-5" />
+      <FixtureCorrections slug={slug} detail={data} className="md:col-span-6 xl:col-span-5" />
 
       {data.reports.length > 0 && (
         <Tile as="section" tone="sage" aria-labelledby="history-heading" className="flex flex-col gap-4 md:col-span-6 xl:col-span-7">
@@ -80,7 +84,7 @@ export function FixturePage() {
           </h2>
           <ol className="flex flex-col gap-3">
             {data.reports.map((report) => (
-              <ReportCard key={report.id} report={report} detail={data} />
+              <ReportCard key={report.id} slug={slug} report={report} detail={data} />
             ))}
           </ol>
         </Tile>
@@ -93,9 +97,26 @@ const KIND_LABEL: Record<Report['kind'], string> = {
   REPORT: 'reported',
   DISPUTE: 'disputed with',
   RESOLUTION: 'settled it at',
+  OVERRIDE: 'overrode it to',
+  FORFEIT: 'recorded a forfeit,',
 }
 
-function ReportCard({ report, detail }: { report: Report; detail: FixtureDetail }) {
+/** Admin corrections, with the same squads the score forms pick scorers from. */
+function FixtureCorrections({ slug, detail, className }: { slug: string; detail: FixtureDetail; className?: string }) {
+  const { fixture } = detail
+  const homeSquad = useMemberSquad(slug, fixture.home.userId)
+  const awaySquad = useMemberSquad(slug, fixture.away.userId)
+  return (
+    <CorrectionsTile
+      slug={slug}
+      detail={detail}
+      squads={{ HOME: homeSquad.data?.cards ?? [], AWAY: awaySquad.data?.cards ?? [] }}
+      className={className}
+    />
+  )
+}
+
+function ReportCard({ slug, report, detail }: { slug: string; report: Report; detail: FixtureDetail }) {
   const { fixture } = detail
   const isFinal = report.id === detail.finalReportId
   const scorers = (side: 'HOME' | 'AWAY') => report.goals.filter((g) => g.side === side)
@@ -131,7 +152,24 @@ function ReportCard({ report, detail }: { report: Report; detail: FixtureDetail 
           ))}
         </div>
       )}
-      {report.note && <p className="text-xs">“{report.note}”</p>}
+      {report.evidence.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {report.evidence.map((id, i) => (
+            <Thumbnail key={id} src={evidenceSrc(slug, fixture.id, id)} alt={`Screenshot ${i + 1} from ${report.reportedByName}`} />
+          ))}
+        </div>
+      )}
+      {report.mvp && (
+        <p className="text-xs">
+          <span className="text-tile-muted">MVP: </span>
+          {report.mvp.name} ({report.mvp.side === 'HOME' ? fixture.home.name : fixture.away.name})
+        </p>
+      )}
+      {report.note && (
+        <p className="text-xs">
+          {(report.kind === 'OVERRIDE' || report.kind === 'FORFEIT') && <span className="text-tile-muted">Reason: </span>}“{report.note}”
+        </p>
+      )}
     </li>
   )
 }
@@ -157,6 +195,7 @@ function ActionTile({ slug, detail, className }: { slug: string; detail: Fixture
         awayName={fixture.away.name}
         submitLabel="Report score"
         pendingLabel="Reporting…"
+        evidenceSlug={slug}
         pending={act.isPending}
         squads={squads}
         onSubmit={(score) => run({ action: 'report', score }, 'Score reported. Waiting for confirmation.')}
@@ -197,6 +236,7 @@ function ActionTile({ slug, detail, className }: { slug: string; detail: Fixture
           withNote
           submitLabel="Send dispute"
           pendingLabel="Sending…"
+          evidenceSlug={slug}
           pending={act.isPending}
           squads={squads}
           onSubmit={(score) => run({ action: 'dispute', score }, 'Dispute sent to the league admins')}
@@ -278,7 +318,7 @@ function Resolve({ detail, squads, pending, onSubmit }: ResolveProps) {
         key={choice}
         homeName={fixture.home.name}
         awayName={fixture.away.name}
-        initial={chosen && { homeGoals: chosen.homeGoals, awayGoals: chosen.awayGoals, goals: chosen.goals }}
+        initial={chosen && { homeGoals: chosen.homeGoals, awayGoals: chosen.awayGoals, goals: chosen.goals, mvp: chosen.mvp }}
         submitLabel="Settle result"
         pendingLabel="Settling…"
         pending={pending}
@@ -306,6 +346,9 @@ function statusLine({ fixture }: FixtureDetail, viewerId?: string) {
     case 'DISPUTED':
       return 'The players disagree on the score. An owner or admin will decide.'
     case 'CONFIRMED':
+      if (fixture.forfeit === 'BOTH') return 'Both sides forfeited. Counts as a 0–0 draw.'
+      if (fixture.forfeit) return `${fixture.forfeit === 'HOME' ? fixture.home.name : fixture.away.name} forfeited.`
+      if (fixture.overridden) return 'Final result, overridden by an admin. The reason is in the score history.'
       return fixture.decidedByAdmin ? 'Final result, decided by an admin.' : 'Final result.'
   }
 }

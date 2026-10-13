@@ -1,6 +1,7 @@
-import { Globe, Lock } from 'lucide-react'
+import { Globe, Lock, MessageSquare } from 'lucide-react'
 import { Link, useParams } from 'react-router'
 import { ApiError } from '../api/client'
+import { LogTile } from '../features/activity/LogTile'
 import { Bento } from '../components/layout/Page'
 import { Button } from '../components/ui/Button'
 import { Crest } from '../components/ui/Crest'
@@ -18,6 +19,7 @@ import { SeasonTile } from '../features/match/SeasonTile'
 import { StandingsTile } from '../features/match/StandingsTile'
 import { useSeason } from '../features/match/useSeason'
 import { SquadAdminTile } from '../features/roster/SquadAdminTile'
+import { LeaderboardsTile } from '../features/stats/LeaderboardsTile'
 import { SquadTile } from '../features/roster/SquadTile'
 
 export function LeaguePage() {
@@ -64,10 +66,20 @@ export function LeaguePage() {
         </div>
         <div className="flex flex-col gap-6">
           <h1 className="type-poster break-words">{league.name}</h1>
-          <dl className="flex w-fit min-w-44 flex-col gap-2 rounded-inner bg-tile-soft p-5">
-            <dt className="type-heading">Members</dt>
-            <dd className="type-metric">{league.memberCount}</dd>
-          </dl>
+          <div className="flex flex-wrap items-end gap-3">
+            <dl className="flex w-fit min-w-44 flex-col gap-2 rounded-inner bg-tile-soft p-5">
+              <dt className="type-heading">Members</dt>
+              <dd className="type-metric">{league.memberCount}</dd>
+            </dl>
+            {league.myRole === 'OWNER' && (
+              <Button asChild variant="secondary">
+                <Link to={`/leagues/${league.slug}/settings/discord`}>
+                  <MessageSquare className="size-4" aria-hidden />
+                  Discord
+                </Link>
+              </Button>
+            )}
+          </div>
         </div>
       </Tile>
 
@@ -85,7 +97,13 @@ export function LeaguePage() {
 
       {season.data && (
         <>
-          <StandingsTile slug={league.slug} viewerId={me?.id} className="md:col-span-6 xl:col-span-7" />
+          <StandingsTile
+            slug={league.slug}
+            viewerId={me?.id}
+            canManage={canManage}
+            players={season.data.players}
+            className="md:col-span-6 xl:col-span-7"
+          />
           <FixturesTile
             key={season.data.id}
             slug={league.slug}
@@ -95,6 +113,9 @@ export function LeaguePage() {
           />
         </>
       )}
+
+      {season.data && <LeaderboardsTile slug={league.slug} className="md:col-span-6 xl:col-span-7" />}
+      <LogTile slug={league.slug} className="md:col-span-6 xl:col-span-5" />
 
       {league.myRole && <SquadTile slug={league.slug} className="md:col-span-6 xl:col-span-7" />}
       {canManage && <SquadAdminTile slug={league.slug} className="md:col-span-6 xl:col-span-5" />}

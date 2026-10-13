@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// In development the API runs on :8080 unless API_TARGET points elsewhere (e.g. http://localhost:8081).
+const apiTarget = process.env.API_TARGET ?? 'http://localhost:8080'
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
@@ -36,12 +39,12 @@ export default defineConfig({
     }),
   ],
   server: {
-    // In development the API runs on :8080; proxying keeps everything same-origin (no CORS),
+    // Proxying keeps everything same-origin (no CORS),
     // and the OAuth routes must go through the proxy so the session cookie lands on this host.
     proxy: {
-      '/api': { target: 'http://localhost:8080', xfwd: true },
-      '/oauth2': { target: 'http://localhost:8080', xfwd: true },
-      '/login/oauth2': { target: 'http://localhost:8080', xfwd: true },
+      '/api': { target: apiTarget, xfwd: true },
+      '/oauth2': { target: apiTarget, xfwd: true },
+      '/login/oauth2': { target: apiTarget, xfwd: true },
     },
   },
 })

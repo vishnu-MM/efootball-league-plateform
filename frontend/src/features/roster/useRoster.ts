@@ -32,13 +32,15 @@ export const RATING_MAX = 110
 
 export type Card = { id: string; playerName: string; cardType: CardType; rating: number; position: Position }
 
-export type SquadCard = { id: string; status: SquadCardStatus; rejectReason: string | null; card: Card }
+export type SquadCard = { id: string; status: SquadCardStatus; rejectReason: string | null; card: Card; hasProof: boolean }
 
 export type SquadRules = {
   maxSquadSize: number | null
   capType: CapType
   capValue: number | null
   bannedCardTypes: CardType[]
+  /** New cards need a screenshot proving the manager owns them. */
+  requireCardProof?: boolean
 }
 
 export type FlaggedSquad = { userId: string; name: string; problems: string[] }
@@ -54,7 +56,7 @@ export type Roster = {
   pendingCount: number | null
 }
 
-export type PendingCard = { id: string; userId: string; teamName: string; card: Card }
+export type PendingCard = { id: string; userId: string; teamName: string; card: Card; hasProof: boolean }
 
 /** An approved card as squad pages and scorer pickers show it. */
 export type SquadPlayer = {
@@ -67,9 +69,14 @@ export type SquadPlayer = {
 
 export type MemberSquad = { userId: string; name: string; cards: SquadPlayer[] }
 
-export type NewCard =
+export type NewCard = (
   | { cardId: string }
   | { playerName: string; cardType: CardType; rating: number; position: Position }
+) & { proofUploadId?: string }
+
+/** Where a card's proof screenshot can be loaded (for its manager and owners/admins). */
+export const proofSrc = (slug: string, squadCardId: string) =>
+  `/api/leagues/${encodeURIComponent(slug)}/squad/cards/${encodeURIComponent(squadCardId)}/proof`
 
 const base = (slug: string) => `/api/leagues/${encodeURIComponent(slug)}`
 

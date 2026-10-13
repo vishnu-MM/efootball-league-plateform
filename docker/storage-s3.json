@@ -1,0 +1,9 @@
+{
+  "identities": [
+    {
+      "name": "league-backend",
+      "credentials": [{ "accessKey": "league", "secretKey": "league-secret" }],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+    }
+  ]
+}

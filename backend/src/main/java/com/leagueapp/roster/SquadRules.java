@@ -37,6 +37,9 @@ class SquadRules {
 	@Column(name = "window_open", nullable = false)
 	private boolean windowOpen;
 
+	@Column(name = "require_card_proof", nullable = false)
+	private boolean requireCardProof;
+
 	protected SquadRules() {
 	}
 
@@ -63,6 +66,15 @@ class SquadRules {
 
 	boolean isWindowOpen() {
 		return windowOpen;
+	}
+
+	/** New cards need a screenshot of the card in the game. */
+	boolean isRequireCardProof() {
+		return requireCardProof;
+	}
+
+	void setRequireCardProof(boolean require) {
+		this.requireCardProof = require;
 	}
 
 	SquadRuleChecker.Rules rules() {

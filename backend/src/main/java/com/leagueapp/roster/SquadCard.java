@@ -42,6 +42,9 @@ class SquadCard {
 	@Column(name = "reject_reason", length = REASON_MAX)
 	private String rejectReason;
 
+	@Column(name = "proof_upload_id")
+	private UUID proofUploadId;
+
 	@Column(name = "decided_by")
 	private UUID decidedBy;
 
@@ -84,6 +87,19 @@ class SquadCard {
 
 	UUID getId() {
 		return id;
+	}
+
+	/** The screenshot proving the manager owns the card, if one was added. */
+	void attachProof(UUID uploadId) {
+		this.proofUploadId = uploadId;
+	}
+
+	UUID getProofUploadId() {
+		return proofUploadId;
+	}
+
+	UUID getLeagueId() {
+		return leagueId;
 	}
 
 	UUID getUserId() {

@@ -4,6 +4,8 @@ import { useEffect, type ComponentType } from 'react'
 import { Link, NavLink, Outlet, useLocation, useMatch, useNavigate } from 'react-router'
 import { useMe } from '../../features/auth/useAuth'
 import { useLeague, useMyLeagues } from '../../features/league/useLeagues'
+import { NotificationBell } from '../../features/notify/NotificationBell'
+import { useLiveUpdates } from '../../features/notify/useLiveUpdates'
 import { APP_NAME } from '../../lib/app'
 import { cn } from '../../lib/cn'
 import { initials } from '../../lib/initials'
@@ -23,6 +25,7 @@ const PAGE_LABELS: Record<string, string> = {
   '/signin': 'Sign in',
   '/leagues/new': 'New league',
   '/account': 'Account',
+  '/notifications': 'Notifications',
 }
 
 /** The current page's name for the breadcrumb; a league page shows the league's name. */
@@ -41,6 +44,9 @@ function useCurrentPageLabel() {
   if (/^\/leagues\/[^/]+\/squad\/approvals$/.test(pathname)) return 'Approvals'
   if (/^\/leagues\/[^/]+\/squad\/rules$/.test(pathname)) return 'Squad rules'
   if (/^\/leagues\/[^/]+\/squads\/[^/]+$/.test(pathname)) return 'Squad'
+  if (/^\/leagues\/[^/]+\/log$/.test(pathname)) return 'League log'
+  if (/^\/leagues\/[^/]+\/stats$/.test(pathname)) return 'Leaderboards'
+  if (/^\/leagues\/[^/]+\/settings\/discord$/.test(pathname)) return 'Discord'
   return '404'
 }
 
@@ -159,7 +165,9 @@ function TopBar({ signedIn }: { signedIn: boolean }) {
           </li>
         </ol>
       </nav>
-      {!signedIn && (
+      {signedIn ? (
+        <NotificationBell />
+      ) : (
         <Button asChild variant="secondary">
           <Link to="/signin">Sign in</Link>
         </Button>
@@ -170,7 +178,7 @@ function TopBar({ signedIn }: { signedIn: boolean }) {
 
 const TAB_ROOTS = new Set(Object.keys(PAGE_LABELS))
 
-function MobileHeader() {
+function MobileHeader({ signedIn }: { signedIn: boolean }) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const isRoot = TAB_ROOTS.has(pathname)
@@ -187,6 +195,7 @@ function MobileHeader() {
         </button>
       )}
       <span className="font-crumb text-lg text-muted-dark">{APP_NAME}</span>
+      {signedIn && <NotificationBell className="ml-auto" />}
     </header>
   )
 }
@@ -240,6 +249,7 @@ export function AppShell() {
   const { data: me } = useMe()
   const signedIn = Boolean(me)
   useContinueAfterSignIn(signedIn)
+  useLiveUpdates(signedIn)
 
   return (
     <Tooltip.Provider delayDuration={250}>
@@ -247,7 +257,7 @@ export function AppShell() {
         <div className="flex min-h-dvh flex-1 bg-ink md:min-h-0 md:overflow-hidden md:rounded-frame md:border-2 md:border-(--frame-border)">
           <Rail signedIn={signedIn} />
           <div className="flex min-w-0 flex-1 flex-col">
-            <MobileHeader />
+            <MobileHeader signedIn={signedIn} />
             <TopBar signedIn={signedIn} />
             <OfflineBanner />
             <main className="flex-1 px-4 pt-6 pb-32 md:overflow-y-auto md:px-6 md:pt-0 md:pb-6">
