@@ -86,6 +86,10 @@ class SquadCard {
 		return id;
 	}
 
+	UUID getLeagueId() {
+		return leagueId;
+	}
+
 	UUID getUserId() {
 		return userId;
 	}

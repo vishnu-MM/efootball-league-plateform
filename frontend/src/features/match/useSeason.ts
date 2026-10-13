@@ -3,7 +3,9 @@ import { getJson, send } from '../../api/client'
 
 export type SeasonFormat = 'SINGLE' | 'HOME_AND_AWAY'
 export type FixtureStatus = 'SCHEDULED' | 'AWAITING_CONFIRMATION' | 'DISPUTED' | 'CONFIRMED'
-export type FixtureAction = 'REPORT' | 'CONFIRM' | 'DISPUTE' | 'RESOLVE'
+export type FixtureAction = 'REPORT' | 'CONFIRM' | 'DISPUTE' | 'RESOLVE' | 'OVERRIDE' | 'FORFEIT'
+/** Which side forfeited a fixture. */
+export type Forfeit = 'HOME' | 'AWAY' | 'BOTH'
 export type Side = 'HOME' | 'AWAY'
 
 export type FixtureSide = { userId: string; name: string }
@@ -20,6 +22,8 @@ export type FixtureSummary = {
   awayGoals: number | null
   reportedBy: string | null
   decidedByAdmin: boolean
+  forfeit: Forfeit | null
+  overridden: boolean
   actions: FixtureAction[]
 }
 
@@ -49,7 +53,7 @@ export type Goal = {
 
 export type Report = {
   id: string
-  kind: 'REPORT' | 'DISPUTE' | 'RESOLUTION'
+  kind: 'REPORT' | 'DISPUTE' | 'RESOLUTION' | 'OVERRIDE' | 'FORFEIT'
   reportedBy: string
   reportedByName: string
   homeGoals: number
@@ -76,10 +80,18 @@ export type StandingsRow = {
   goalsFor: number
   goalsAgainst: number
   goalDifference: number
+  /** Points taken away by an admin; already subtracted from `points`. */
+  deducted: number
   points: number
 }
 
-export type Standings = { season: { id: string; name: string; active: boolean } | null; rows: StandingsRow[] }
+export type Deduction = { id: string; userId: string; teamName: string; points: number; reason: string; createdAt: string }
+
+export type Standings = {
+  season: { id: string; name: string; active: boolean } | null
+  rows: StandingsRow[]
+  deductions: Deduction[]
+}
 
 export type ScoreInput = { homeGoals: number; awayGoals: number; goals: Goal[]; note?: string }
 
@@ -139,6 +151,42 @@ export function useFixtureAction(slug: string, id: string) {
       ),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leagues'] }),
   })
+}
+
+export type ForfeitInput = { forfeiting: Forfeit; homeGoals?: number; awayGoals?: number; reason: string }
+
+/** Owner/admin corrections to a fixture: override a final result, or record a forfeit. */
+export function useCorrection(slug: string, id: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { action: 'override'; score: ScoreInput } | { action: 'forfeit'; forfeit: ForfeitInput }) =>
+      send(
+        'POST',
+        `/api/leagues/${base(slug)}/fixtures/${encodeURIComponent(id)}/${input.action}`,
+        input.action === 'override'
+          ? { homeGoals: input.score.homeGoals, awayGoals: input.score.awayGoals, goals: input.score.goals, reason: input.score.note }
+          : input.forfeit,
+      ),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leagues'] }),
+  })
+}
+
+/** Owner/admin: take points from a participant in the active season, or give them back. */
+export function useDeductions(slug: string) {
+  const queryClient = useQueryClient()
+  const onSuccess = () => queryClient.invalidateQueries({ queryKey: ['leagues'] })
+  return {
+    deduct: useMutation({
+      mutationFn: (input: { userId: string; points: number; reason: string }) =>
+        send<{ id: string }>('POST', `/api/leagues/${base(slug)}/deductions`, input),
+      onSuccess,
+    }),
+    revoke: useMutation({
+      mutationFn: (input: { id: string; reason: string }) =>
+        send('POST', `/api/leagues/${base(slug)}/deductions/${encodeURIComponent(input.id)}/revoke`, { reason: input.reason }),
+      onSuccess,
+    }),
+  }
 }
 
 /** Rounds in order, each with its fixtures and (when the season has dates) its play-by date. */

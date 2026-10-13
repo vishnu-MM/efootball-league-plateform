@@ -48,6 +48,17 @@ interface FixtureRepository extends JpaRepository<Fixture, UUID> {
 
 }
 
+interface PointAdjustmentRepository extends JpaRepository<PointAdjustment, UUID> {
+
+	List<PointAdjustment> findBySeasonIdOrderByCreatedAtAsc(UUID seasonId);
+
+	/** Row lock so a deduction can't be revoked twice at the same moment. */
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select a from PointAdjustment a where a.id = :id")
+	Optional<PointAdjustment> lockById(@Param("id") UUID id);
+
+}
+
 interface ScoreReportRepository extends JpaRepository<ScoreReport, UUID> {
 
 	List<ScoreReport> findByFixtureIdOrderByCreatedAtAsc(UUID fixtureId);

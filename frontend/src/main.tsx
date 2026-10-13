@@ -16,6 +16,7 @@ import { FixturePage } from './pages/FixturePage'
 import { HomePage } from './pages/HomePage'
 import { JoinPage } from './pages/JoinPage'
 import { LeaguePage } from './pages/LeaguePage'
+import { LogPage } from './pages/LogPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { SignInPage } from './pages/SignInPage'
 import { SquadPage } from './pages/SquadPage'
@@ -43,6 +44,7 @@ const router = createBrowserRouter([
       { path: 'leagues/:slug', element: <LeaguePage /> },
       { path: 'leagues/:slug/fixtures/:id', element: <FixturePage /> },
       { path: 'leagues/:slug/squads/:userId', element: <SquadPage /> },
+      { path: 'leagues/:slug/log', element: <LogPage /> },
       { path: 'join/:code', element: <JoinPage /> },
       {
         element: <RequireAuth />,

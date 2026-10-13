@@ -1,6 +1,7 @@
 import { Globe, Lock } from 'lucide-react'
 import { Link, useParams } from 'react-router'
 import { ApiError } from '../api/client'
+import { LogTile } from '../features/activity/LogTile'
 import { Bento } from '../components/layout/Page'
 import { Button } from '../components/ui/Button'
 import { Crest } from '../components/ui/Crest'
@@ -85,7 +86,13 @@ export function LeaguePage() {
 
       {season.data && (
         <>
-          <StandingsTile slug={league.slug} viewerId={me?.id} className="md:col-span-6 xl:col-span-7" />
+          <StandingsTile
+            slug={league.slug}
+            viewerId={me?.id}
+            canManage={canManage}
+            players={season.data.players}
+            className="md:col-span-6 xl:col-span-7"
+          />
           <FixturesTile
             key={season.data.id}
             slug={league.slug}
@@ -95,6 +102,8 @@ export function LeaguePage() {
           />
         </>
       )}
+
+      <LogTile slug={league.slug} className="md:col-span-6 xl:col-span-5" />
 
       {league.myRole && <SquadTile slug={league.slug} className="md:col-span-6 xl:col-span-7" />}
       {canManage && <SquadAdminTile slug={league.slug} className="md:col-span-6 xl:col-span-5" />}

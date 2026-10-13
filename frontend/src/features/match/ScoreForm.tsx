@@ -10,6 +10,9 @@ type ScoreFormProps = {
   awayName: string
   initial?: ScoreInput
   withNote?: boolean
+  /** Label for the note; with `noteRequired` the form can't be sent without one (e.g. an admin's reason). */
+  noteLabel?: string
+  noteRequired?: boolean
   submitLabel: string
   pendingLabel: string
   pending: boolean
@@ -21,7 +24,19 @@ type ScoreFormProps = {
 const MAX_GOALS = 99
 
 /** Goals per side with steppers, optional scorers (and assists) picked from squads or typed, and an optional note. */
-export function ScoreForm({ homeName, awayName, initial, withNote, submitLabel, pendingLabel, pending, onSubmit, squads }: ScoreFormProps) {
+export function ScoreForm({
+  homeName,
+  awayName,
+  initial,
+  withNote,
+  noteLabel = 'Note for the admin (optional)',
+  noteRequired,
+  submitLabel,
+  pendingLabel,
+  pending,
+  onSubmit,
+  squads,
+}: ScoreFormProps) {
   const [home, setHome] = useState(initial?.homeGoals ?? 0)
   const [away, setAway] = useState(initial?.awayGoals ?? 0)
   const [goals, setGoals] = useState<Goal[]>(initial?.goals ?? [])
@@ -142,12 +157,13 @@ export function ScoreForm({ homeName, awayName, initial, withNote, submitLabel, 
       {withNote && (
         <div className="flex flex-col gap-2">
           <label htmlFor="dispute-note" className="type-label px-1 text-tile-muted">
-            Note for the admin (optional)
+            {noteLabel}
           </label>
           <textarea
             id="dispute-note"
             rows={3}
             maxLength={280}
+            required={noteRequired}
             value={note}
             onChange={(e) => setNote(e.target.value)}
             className="rounded-inner bg-field px-5 py-3 text-sm text-field-fg"

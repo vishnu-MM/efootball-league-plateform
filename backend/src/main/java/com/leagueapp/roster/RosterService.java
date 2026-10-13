@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Limit;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -28,12 +29,15 @@ class RosterService {
 	private final Squads squads;
 	private final CardRepository cards;
 	private final SquadCardRepository squadCards;
+	private final ApplicationEventPublisher events;
 
-	RosterService(LeagueService leagueService, Squads squads, CardRepository cards, SquadCardRepository squadCards) {
+	RosterService(LeagueService leagueService, Squads squads, CardRepository cards, SquadCardRepository squadCards,
+			ApplicationEventPublisher events) {
 		this.leagueService = leagueService;
 		this.squads = squads;
 		this.cards = cards;
 		this.squadCards = squadCards;
+		this.events = events;
 	}
 
 	/** Everything the league page shows about squads, for one member. */
@@ -89,7 +93,10 @@ class RosterService {
 		if (!problems.isEmpty()) {
 			throw conflict("Adding this card would break the squad rules: " + String.join("; ", problems));
 		}
-		return squadCards.save(new SquadCard(league.leagueId(), viewerId, card));
+		SquadCard added = squadCards.save(new SquadCard(league.leagueId(), viewerId, card));
+		events.publishEvent(
+				new RosterEvents.CardSubmitted(league.leagueId(), viewerId, added.getId(), card.getPlayerName()));
+		return added;
 	}
 
 	/** The owner takes a card out of their squad: while the window is open, or any time for a rejected card. */
@@ -118,13 +125,19 @@ class RosterService {
 
 	@Transactional
 	void approve(String slug, UUID viewerId, UUID squadCardId) {
-		pendingForDecision(slug, viewerId, squadCardId).approve(viewerId);
+		SquadCard card = pendingForDecision(slug, viewerId, squadCardId);
+		card.approve(viewerId);
+		events.publishEvent(new RosterEvents.CardDecided(card.getLeagueId(), viewerId, card.getId(), card.getUserId(),
+				card.getCard().getPlayerName(), true, null));
 	}
 
 	@Transactional
 	void reject(String slug, UUID viewerId, UUID squadCardId, String reason) {
 		String clean = reason == null || reason.isBlank() ? null : reason.strip();
-		pendingForDecision(slug, viewerId, squadCardId).reject(viewerId, clean);
+		SquadCard card = pendingForDecision(slug, viewerId, squadCardId);
+		card.reject(viewerId, clean);
+		events.publishEvent(new RosterEvents.CardDecided(card.getLeagueId(), viewerId, card.getId(), card.getUserId(),
+				card.getCard().getPlayerName(), false, clean));
 	}
 
 	/** Which squads these rules would flag, without saving them. Owner only. */
@@ -140,6 +153,7 @@ class RosterService {
 		LeagueAccess league = requireOwner(slug, viewerId);
 		validate(rules);
 		squads.lock(league.leagueId()).change(rules);
+		events.publishEvent(new RosterEvents.SquadRulesChanged(league.leagueId(), viewerId));
 		return flagged(league.leagueId(), rules);
 	}
 
@@ -147,12 +161,7 @@ class RosterService {
 	@Transactional
 	void setWindow(String slug, UUID viewerId, boolean open) {
 		LeagueAccess league = requireManager(slug, viewerId);
-		if (open) {
-			squads.openWindow(league.leagueId());
-		}
-		else {
-			squads.closeWindow(league.leagueId());
-		}
+		squads.setWindow(league.leagueId(), viewerId, open);
 	}
 
 	/** A member's approved squad, for anyone who can see the league. */

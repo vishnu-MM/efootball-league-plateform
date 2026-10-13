@@ -9,6 +9,7 @@ import { Button } from '../components/ui/Button'
 import { EmptyState, ErrorState, Skeleton } from '../components/ui/States'
 import { IconTile, Tile } from '../components/ui/Tile'
 import { useMe } from '../features/auth/useAuth'
+import { CorrectionsTile } from '../features/match/CorrectionsTile'
 import { ScoreText, StatusChip } from '../features/match/FixtureRow'
 import { ScoreForm } from '../features/match/ScoreForm'
 import {
@@ -72,6 +73,7 @@ export function FixturePage() {
       </Tile>
 
       <ActionTile slug={slug} detail={data} className="md:col-span-6 xl:col-span-5" />
+      <FixtureCorrections slug={slug} detail={data} className="md:col-span-6 xl:col-span-5" />
 
       {data.reports.length > 0 && (
         <Tile as="section" tone="sage" aria-labelledby="history-heading" className="flex flex-col gap-4 md:col-span-6 xl:col-span-7">
@@ -93,6 +95,23 @@ const KIND_LABEL: Record<Report['kind'], string> = {
   REPORT: 'reported',
   DISPUTE: 'disputed with',
   RESOLUTION: 'settled it at',
+  OVERRIDE: 'overrode it to',
+  FORFEIT: 'recorded a forfeit,',
+}
+
+/** Admin corrections, with the same squads the score forms pick scorers from. */
+function FixtureCorrections({ slug, detail, className }: { slug: string; detail: FixtureDetail; className?: string }) {
+  const { fixture } = detail
+  const homeSquad = useMemberSquad(slug, fixture.home.userId)
+  const awaySquad = useMemberSquad(slug, fixture.away.userId)
+  return (
+    <CorrectionsTile
+      slug={slug}
+      detail={detail}
+      squads={{ HOME: homeSquad.data?.cards ?? [], AWAY: awaySquad.data?.cards ?? [] }}
+      className={className}
+    />
+  )
 }
 
 function ReportCard({ report, detail }: { report: Report; detail: FixtureDetail }) {
@@ -131,7 +150,11 @@ function ReportCard({ report, detail }: { report: Report; detail: FixtureDetail 
           ))}
         </div>
       )}
-      {report.note && <p className="text-xs">“{report.note}”</p>}
+      {report.note && (
+        <p className="text-xs">
+          {(report.kind === 'OVERRIDE' || report.kind === 'FORFEIT') && <span className="text-tile-muted">Reason: </span>}“{report.note}”
+        </p>
+      )}
     </li>
   )
 }
@@ -306,6 +329,9 @@ function statusLine({ fixture }: FixtureDetail, viewerId?: string) {
     case 'DISPUTED':
       return 'The players disagree on the score. An owner or admin will decide.'
     case 'CONFIRMED':
+      if (fixture.forfeit === 'BOTH') return 'Both sides forfeited. Counts as a 0–0 draw.'
+      if (fixture.forfeit) return `${fixture.forfeit === 'HOME' ? fixture.home.name : fixture.away.name} forfeited.`
+      if (fixture.overridden) return 'Final result, overridden by an admin. The reason is in the score history.'
       return fixture.decidedByAdmin ? 'Final result, decided by an admin.' : 'Final result.'
   }
 }

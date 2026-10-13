@@ -13,6 +13,7 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -36,9 +37,11 @@ class SeasonService {
 	private final ScoreReportRepository reports;
 	private final TeamNames teamNames;
 	private final Squads squads;
+	private final ApplicationEventPublisher events;
 
 	SeasonService(LeagueService leagueService, SeasonRepository seasons, SeasonParticipantRepository participants,
-			FixtureRepository fixtures, ScoreReportRepository reports, TeamNames teamNames, Squads squads) {
+			FixtureRepository fixtures, ScoreReportRepository reports, TeamNames teamNames, Squads squads,
+			ApplicationEventPublisher events) {
 		this.leagueService = leagueService;
 		this.seasons = seasons;
 		this.participants = participants;
@@ -46,6 +49,7 @@ class SeasonService {
 		this.reports = reports;
 		this.teamNames = teamNames;
 		this.squads = squads;
+		this.events = events;
 	}
 
 	/** Creates the season and its whole fixture list. Owners and admins only; one active season per league. */
@@ -85,6 +89,8 @@ class SeasonService {
 			.map(p -> new Fixture(season.getId(), p.round(), p.home(), p.away(), season.playBy(p.round())))
 			.toList());
 		squads.closeWindow(league.leagueId());
+		events.publishEvent(new MatchEvents.SeasonStarted(league.leagueId(), actorId, season.getId(), season.getName(),
+				players));
 		return season;
 	}
 
@@ -117,7 +123,8 @@ class SeasonService {
 		Map<UUID, ScoreReport> pending = pendingReports(all);
 
 		List<FixtureSummary> summaries = all.stream()
-			.map(f -> FixtureSummary.of(f, names, pending.get(f.getId()), viewerId, league.canManage()))
+			.map(f -> FixtureSummary.of(f, names, pending.get(f.getId()), viewerId, league.canManage(),
+					season.isActive()))
 			.toList();
 		List<Player> players = playerIds.stream()
 			.map(id -> new Player(id, names.getOrDefault(id, "Player")))

@@ -26,11 +26,14 @@ class MatchController {
 
 	private final SeasonService seasonService;
 	private final FixtureService fixtureService;
+	private final DeductionService deductionService;
 	private final CurrentUser currentUser;
 
-	MatchController(SeasonService seasonService, FixtureService fixtureService, CurrentUser currentUser) {
+	MatchController(SeasonService seasonService, FixtureService fixtureService, DeductionService deductionService,
+			CurrentUser currentUser) {
 		this.seasonService = seasonService;
 		this.fixtureService = fixtureService;
+		this.deductionService = deductionService;
 		this.currentUser = currentUser;
 	}
 
@@ -78,6 +81,54 @@ class MatchController {
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	void resolve(@PathVariable String slug, @PathVariable UUID id, @Valid @RequestBody ScoreRequest body) {
 		fixtureService.resolve(slug, id, currentUser.requireId(), body.toInput());
+	}
+
+	/** Owner/admin: replace a final result. {@code note} is the reason, and is required. */
+	@PostMapping("/api/leagues/{slug}/fixtures/{id}/override")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	void override(@PathVariable String slug, @PathVariable UUID id, @Valid @RequestBody OverrideRequest body) {
+		fixtureService.override(slug, id, currentUser.requireId(),
+				new ScoreInput(body.homeGoals(), body.awayGoals(), body.goals(), body.reason()));
+	}
+
+	/** Owner/admin: settle a fixture as forfeited by one side (3–0 unless a score is given) or both (0–0). */
+	@PostMapping("/api/leagues/{slug}/fixtures/{id}/forfeit")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	void forfeit(@PathVariable String slug, @PathVariable UUID id, @Valid @RequestBody ForfeitRequest body) {
+		fixtureService.forfeit(slug, id, currentUser.requireId(), body.forfeiting(), body.homeGoals(), body.awayGoals(),
+				body.reason());
+	}
+
+	@PostMapping("/api/leagues/{slug}/deductions")
+	@ResponseStatus(HttpStatus.CREATED)
+	CreatedDeduction deduct(@PathVariable String slug, @Valid @RequestBody DeductionRequest body) {
+		return new CreatedDeduction(
+				deductionService.deduct(slug, currentUser.requireId(), body.userId(), body.points(), body.reason()).getId());
+	}
+
+	@PostMapping("/api/leagues/{slug}/deductions/{id}/revoke")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	void revokeDeduction(@PathVariable String slug, @PathVariable UUID id, @Valid @RequestBody ReasonRequest body) {
+		deductionService.revoke(slug, currentUser.requireId(), id, body.reason());
+	}
+
+	record OverrideRequest(@Min(0) @Max(ScoreInput.MAX_GOALS) int homeGoals,
+			@Min(0) @Max(ScoreInput.MAX_GOALS) int awayGoals,
+			@Size(max = 2 * ScoreInput.MAX_GOALS) List<ScoreInput.GoalInput> goals,
+			@Size(max = ScoreReport.NOTE_MAX) String reason) {
+	}
+
+	record ForfeitRequest(Fixture.Forfeit forfeiting, Integer homeGoals, Integer awayGoals,
+			@Size(max = ScoreReport.NOTE_MAX) String reason) {
+	}
+
+	record DeductionRequest(UUID userId, int points, @Size(max = ScoreReport.NOTE_MAX) String reason) {
+	}
+
+	record ReasonRequest(@Size(max = ScoreReport.NOTE_MAX) String reason) {
+	}
+
+	record CreatedDeduction(UUID id) {
 	}
 
 	record CreateSeasonRequest(@Size(max = Season.NAME_MAX) String name,

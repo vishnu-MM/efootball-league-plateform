@@ -18,7 +18,10 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
 
-/** A score someone entered for a fixture: the first report, a dispute's counter-score, or an admin's resolution. */
+/**
+ * A score someone entered for a fixture: the first report, a dispute's counter-score, an admin's resolution, an
+ * admin's override of a final result, or a forfeit. For overrides and forfeits the note holds the admin's reason.
+ */
 @Entity
 @Table(name = "score_report")
 class ScoreReport {
@@ -109,7 +112,7 @@ class ScoreReport {
 	}
 
 	enum Kind {
-		REPORT, DISPUTE, RESOLUTION
+		REPORT, DISPUTE, RESOLUTION, OVERRIDE, FORFEIT
 	}
 
 	enum Side {

@@ -70,6 +70,16 @@ class StandingsCalculatorTests {
 		assertThat(table.get(1).points()).isEqualTo(1);
 	}
 
+	@Test
+	void deductionsCountInTheOrderButNotInHeadToHead() {
+		// Ann beats Ben (3 points), but a 4-point deduction leaves Ann on -1, below Ben's 0.
+		List<StandingsCalculator.Row> table = StandingsCalculator.table(List.of(ann, ben), names,
+				List.of(result(ann, ben, 1, 0)), 3, 1, java.util.Map.of(ann, 4));
+		assertThat(table.get(0).userId()).isEqualTo(ben);
+		assertThat(table.get(1).points()).isEqualTo(-1);
+		assertThat(table.get(1).deducted()).isEqualTo(4);
+	}
+
 	private List<StandingsCalculator.Row> table(List<UUID> players, List<FinalResult> results) {
 		return StandingsCalculator.table(players, names, results, 3, 1);
 	}
