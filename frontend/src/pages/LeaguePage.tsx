@@ -19,6 +19,7 @@ import { SeasonTile } from '../features/match/SeasonTile'
 import { StandingsTile } from '../features/match/StandingsTile'
 import { useSeason } from '../features/match/useSeason'
 import { SquadAdminTile } from '../features/roster/SquadAdminTile'
+import { LeaderboardsTile } from '../features/stats/LeaderboardsTile'
 import { SquadTile } from '../features/roster/SquadTile'
 
 export function LeaguePage() {
@@ -103,6 +104,7 @@ export function LeaguePage() {
         </>
       )}
 
+      {season.data && <LeaderboardsTile slug={league.slug} className="md:col-span-6 xl:col-span-7" />}
       <LogTile slug={league.slug} className="md:col-span-6 xl:col-span-5" />
 
       {league.myRole && <SquadTile slug={league.slug} className="md:col-span-6 xl:col-span-7" />}

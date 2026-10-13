@@ -40,6 +40,13 @@ public class Squads {
 			.toList();
 	}
 
+	/** Card details for these squad cards, removed ones included (goals keep pointing at them): id → card. */
+	public Map<UUID, SquadPlayer> cardsById(Collection<UUID> squadCardIds) {
+		Map<UUID, SquadPlayer> found = new HashMap<>();
+		squadCards.findAllById(squadCardIds).forEach(c -> found.put(c.getId(), SquadPlayer.of(c)));
+		return found;
+	}
+
 	/** For each of these members whose squad breaks the league's rules, what is wrong. */
 	public Map<UUID, List<String>> problems(UUID leagueId, Collection<UUID> userIds) {
 		SquadRuleChecker.Rules current = rulesOf(leagueId).rules();

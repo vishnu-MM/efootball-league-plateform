@@ -88,7 +88,7 @@ class MatchController {
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	void override(@PathVariable String slug, @PathVariable UUID id, @Valid @RequestBody OverrideRequest body) {
 		fixtureService.override(slug, id, currentUser.requireId(),
-				new ScoreInput(body.homeGoals(), body.awayGoals(), body.goals(), body.reason()));
+				new ScoreInput(body.homeGoals(), body.awayGoals(), body.goals(), body.reason(), body.mvp()));
 	}
 
 	/** Owner/admin: settle a fixture as forfeited by one side (3–0 unless a score is given) or both (0–0). */
@@ -115,7 +115,7 @@ class MatchController {
 	record OverrideRequest(@Min(0) @Max(ScoreInput.MAX_GOALS) int homeGoals,
 			@Min(0) @Max(ScoreInput.MAX_GOALS) int awayGoals,
 			@Size(max = 2 * ScoreInput.MAX_GOALS) List<ScoreInput.GoalInput> goals,
-			@Size(max = ScoreReport.NOTE_MAX) String reason) {
+			@Size(max = ScoreReport.NOTE_MAX) String reason, ScoreInput.MvpInput mvp) {
 	}
 
 	record ForfeitRequest(Fixture.Forfeit forfeiting, Integer homeGoals, Integer awayGoals,
@@ -142,10 +142,10 @@ class MatchController {
 
 	record ScoreRequest(@Min(0) @Max(ScoreInput.MAX_GOALS) int homeGoals, @Min(0) @Max(ScoreInput.MAX_GOALS) int awayGoals,
 			@Size(max = 2 * ScoreInput.MAX_GOALS) List<ScoreInput.GoalInput> goals,
-			@Size(max = ScoreReport.NOTE_MAX) String note) {
+			@Size(max = ScoreReport.NOTE_MAX) String note, ScoreInput.MvpInput mvp) {
 
 		ScoreInput toInput() {
-			return new ScoreInput(homeGoals, awayGoals, goals, note);
+			return new ScoreInput(homeGoals, awayGoals, goals, note, mvp);
 		}
 
 	}

@@ -150,6 +150,12 @@ function ReportCard({ report, detail }: { report: Report; detail: FixtureDetail 
           ))}
         </div>
       )}
+      {report.mvp && (
+        <p className="text-xs">
+          <span className="text-tile-muted">MVP: </span>
+          {report.mvp.name} ({report.mvp.side === 'HOME' ? fixture.home.name : fixture.away.name})
+        </p>
+      )}
       {report.note && (
         <p className="text-xs">
           {(report.kind === 'OVERRIDE' || report.kind === 'FORFEIT') && <span className="text-tile-muted">Reason: </span>}“{report.note}”
@@ -301,7 +307,7 @@ function Resolve({ detail, squads, pending, onSubmit }: ResolveProps) {
         key={choice}
         homeName={fixture.home.name}
         awayName={fixture.away.name}
-        initial={chosen && { homeGoals: chosen.homeGoals, awayGoals: chosen.awayGoals, goals: chosen.goals }}
+        initial={chosen && { homeGoals: chosen.homeGoals, awayGoals: chosen.awayGoals, goals: chosen.goals, mvp: chosen.mvp }}
         submitLabel="Settle result"
         pendingLabel="Settling…"
         pending={pending}

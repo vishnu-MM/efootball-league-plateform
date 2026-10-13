@@ -3,7 +3,7 @@ import { useState, type FormEvent, type ReactNode } from 'react'
 import { Button } from '../../components/ui/Button'
 import { cn } from '../../lib/cn'
 import type { SquadPlayer } from '../roster/useRoster'
-import type { Goal, ScoreInput, Side } from './useSeason'
+import type { Goal, Mvp, ScoreInput, Side } from './useSeason'
 
 type ScoreFormProps = {
   homeName: string
@@ -41,6 +41,7 @@ export function ScoreForm({
   const [away, setAway] = useState(initial?.awayGoals ?? 0)
   const [goals, setGoals] = useState<Goal[]>(initial?.goals ?? [])
   const [note, setNote] = useState(initial?.note ?? '')
+  const [mvp, setMvp] = useState<Mvp | null>(initial?.mvp ?? null)
 
   const count = (side: Side) => goals.filter((g) => g.side === side).length
   const squadOf = (side: Side) => squads?.[side] ?? []
@@ -74,6 +75,7 @@ export function ScoreForm({
         return g.scorer.trim() ? [{ side: g.side, scorer: g.scorer.trim(), assist: g.assist?.trim() || null }] : []
       }),
       ...(withNote && note.trim() ? { note: note.trim() } : {}),
+      mvp: mvpToSend(mvp, squadOf),
     })
   }
 
@@ -154,6 +156,8 @@ export function ScoreForm({
         </div>
       </fieldset>
 
+      <MvpPicker homeName={homeName} awayName={awayName} squads={{ HOME: squadOf('HOME'), AWAY: squadOf('AWAY') }} value={mvp} onChange={setMvp} />
+
       {withNote && (
         <div className="flex flex-col gap-2">
           <label htmlFor="dispute-note" className="type-label px-1 text-tile-muted">
@@ -175,6 +179,74 @@ export function ScoreForm({
         {pending ? pendingLabel : submitLabel}
       </Button>
     </form>
+  )
+}
+
+/** What to send for the MVP: a card for a side with a squad, a typed name otherwise; null if none was given. */
+function mvpToSend(mvp: Mvp | null, squadOf: (side: Side) => SquadPlayer[]): Mvp | null {
+  if (!mvp) return null
+  if (squadOf(mvp.side).length > 0) return mvp.cardId ? { side: mvp.side, cardId: mvp.cardId } : null
+  return mvp.name?.trim() ? { side: mvp.side, name: mvp.name.trim() } : null
+}
+
+type MvpPickerProps = {
+  homeName: string
+  awayName: string
+  squads: Record<Side, SquadPlayer[]>
+  value: Mvp | null
+  onChange: (mvp: Mvp | null) => void
+}
+
+/** One select over both sides: a side's approved cards, or "type a name" for a side without a squad. */
+function MvpPicker({ homeName, awayName, squads, value, onChange }: MvpPickerProps) {
+  const selected = !value ? '' : value.cardId ? `card:${value.cardId}` : `typed:${value.side}`
+
+  function pick(key: string) {
+    if (!key) return onChange(null)
+    const [kind, rest] = key.split(':')
+    if (kind === 'typed') return onChange({ side: rest as Side, name: '' })
+    const side = squads.HOME.some((c) => c.squadCardId === rest) ? 'HOME' : 'AWAY'
+    onChange({ side, cardId: rest, name: squads[side].find((c) => c.squadCardId === rest)?.playerName })
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <label htmlFor="mvp-picker" className="type-label px-1 text-tile-muted">
+        Man of the match (optional)
+      </label>
+      <select
+        id="mvp-picker"
+        value={selected}
+        onChange={(e) => pick(e.target.value)}
+        className="h-11 rounded-pill bg-field px-4 text-sm text-field-fg"
+      >
+        <option value="">No MVP</option>
+        {(['HOME', 'AWAY'] as const).map((side) => (
+          <optgroup key={side} label={side === 'HOME' ? homeName : awayName}>
+            {squads[side].length > 0 ? (
+              squads[side].map((card) => (
+                <option key={card.squadCardId} value={`card:${card.squadCardId}`}>
+                  {card.playerName} · {card.rating} {card.position}
+                </option>
+              ))
+            ) : (
+              <option value={`typed:${side}`}>Type a {side === 'HOME' ? homeName : awayName} player…</option>
+            )}
+          </optgroup>
+        ))}
+      </select>
+      {value && !value.cardId && squads[value.side].length === 0 && (
+        <input
+          aria-label="MVP name"
+          placeholder="MVP's name"
+          maxLength={60}
+          required
+          value={value.name ?? ''}
+          onChange={(e) => onChange({ side: value.side, name: e.target.value })}
+          className="h-11 rounded-pill bg-field px-4 text-sm text-field-fg placeholder:text-field-placeholder"
+        />
+      )}
+    </div>
   )
 }
 

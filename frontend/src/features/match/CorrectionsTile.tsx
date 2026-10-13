@@ -71,7 +71,11 @@ export function CorrectionsTile({
         <ScoreForm
           homeName={fixture.home.name}
           awayName={fixture.away.name}
-          initial={final && fixture.forfeit === null ? { homeGoals: final.homeGoals, awayGoals: final.awayGoals, goals: final.goals } : undefined}
+          initial={
+            final && fixture.forfeit === null
+              ? { homeGoals: final.homeGoals, awayGoals: final.awayGoals, goals: final.goals, mvp: final.mvp }
+              : undefined
+          }
           withNote
           noteRequired
           noteLabel="Reason for the change"

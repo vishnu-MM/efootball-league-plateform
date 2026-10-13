@@ -51,6 +51,9 @@ export type Goal = {
   assistCardId?: string | null
 }
 
+/** The match MVP: an approved card of that side's manager, or a typed name for a side without a squad. */
+export type Mvp = { side: Side; cardId?: string | null; name?: string | null }
+
 export type Report = {
   id: string
   kind: 'REPORT' | 'DISPUTE' | 'RESOLUTION' | 'OVERRIDE' | 'FORFEIT'
@@ -61,6 +64,7 @@ export type Report = {
   note: string | null
   createdAt: string
   goals: Goal[]
+  mvp: Mvp | null
 }
 
 export type FixtureDetail = {
@@ -93,7 +97,7 @@ export type Standings = {
   deductions: Deduction[]
 }
 
-export type ScoreInput = { homeGoals: number; awayGoals: number; goals: Goal[]; note?: string }
+export type ScoreInput = { homeGoals: number; awayGoals: number; goals: Goal[]; note?: string; mvp?: Mvp | null }
 
 export type NewSeason = {
   name?: string
@@ -164,7 +168,13 @@ export function useCorrection(slug: string, id: string) {
         'POST',
         `/api/leagues/${base(slug)}/fixtures/${encodeURIComponent(id)}/${input.action}`,
         input.action === 'override'
-          ? { homeGoals: input.score.homeGoals, awayGoals: input.score.awayGoals, goals: input.score.goals, reason: input.score.note }
+          ? {
+              homeGoals: input.score.homeGoals,
+              awayGoals: input.score.awayGoals,
+              goals: input.score.goals,
+              mvp: input.score.mvp,
+              reason: input.score.note,
+            }
           : input.forfeit,
       ),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leagues'] }),

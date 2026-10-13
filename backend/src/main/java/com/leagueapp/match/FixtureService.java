@@ -64,7 +64,7 @@ class FixtureService {
 				league.canManage(), season.isActive());
 		List<ReportView> reportViews = history.stream()
 			.map(r -> new ReportView(r.getId(), r.getKind(), r.getReportedBy(), names.getOrDefault(r.getReportedBy(), "Player"),
-					r.getHomeGoals(), r.getAwayGoals(), r.getNote(), r.getCreatedAt(), List.copyOf(r.getGoals())))
+					r.getHomeGoals(), r.getAwayGoals(), r.getNote(), r.getCreatedAt(), List.copyOf(r.getGoals()), r.getMvp()))
 			.toList();
 		return new FixtureDetail(summary, season.getName(), reportViews, fixture.getFinalReportId());
 	}
@@ -137,7 +137,7 @@ class FixtureService {
 		int[] score = forfeitScore(who, homeGoals, awayGoals);
 		Locked locked = lockFor(slug, fixtureId, actorId, ResultRules.Action.FORFEIT);
 		ScoreReport forfeit = reports.save(new ScoreReport(fixtureId, ScoreReport.Kind.FORFEIT, actorId, score[0],
-				score[1], why, List.of()));
+				score[1], why, List.of(), null));
 		locked.fixture().forfeitWith(forfeit, actorId, who);
 		events.publishEvent(new MatchEvents.ForfeitAwarded(locked.leagueId(), actorId, who.name(), why,
 				match(locked.fixture(), forfeit)));
@@ -257,7 +257,7 @@ class FixtureService {
 				ScoreReport.Side.AWAY, squadNames(leagueId, fixture.getAwayUserId()));
 		List<ScoreReport.Goal> goals = score.validGoals(sideSquads);
 		return new ScoreReport(fixture.getId(), kind, actorId, score.homeGoals(), score.awayGoals(), score.cleanNote(),
-				goals);
+				goals, score.validMvp(sideSquads));
 	}
 
 	/** A player's approved squad cards: squad card id → player name. */
@@ -288,7 +288,7 @@ class FixtureService {
 	}
 
 	record ReportView(UUID id, ScoreReport.Kind kind, UUID reportedBy, String reportedByName, int homeGoals,
-			int awayGoals, String note, OffsetDateTime createdAt, List<ScoreReport.Goal> goals) {
+			int awayGoals, String note, OffsetDateTime createdAt, List<ScoreReport.Goal> goals, ScoreReport.Mvp mvp) {
 	}
 
 	record FixtureDetail(FixtureSummary fixture, String seasonName, List<ReportView> reports, UUID finalReportId) {

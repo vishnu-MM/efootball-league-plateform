@@ -21,6 +21,7 @@ import { NotFoundPage } from './pages/NotFoundPage'
 import { SignInPage } from './pages/SignInPage'
 import { SquadPage } from './pages/SquadPage'
 import { SquadRulesPage } from './pages/SquadRulesPage'
+import { StatsPage } from './pages/StatsPage'
 import './styles.css'
 
 const queryClient = new QueryClient({
@@ -45,6 +46,7 @@ const router = createBrowserRouter([
       { path: 'leagues/:slug/fixtures/:id', element: <FixturePage /> },
       { path: 'leagues/:slug/squads/:userId', element: <SquadPage /> },
       { path: 'leagues/:slug/log', element: <LogPage /> },
+      { path: 'leagues/:slug/stats', element: <StatsPage /> },
       { path: 'join/:code', element: <JoinPage /> },
       {
         element: <RequireAuth />,

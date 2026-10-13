@@ -55,6 +55,16 @@ class ScoreReport {
 	@Column(name = "created_at", nullable = false, insertable = false, updatable = false)
 	private OffsetDateTime createdAt;
 
+	@Enumerated(EnumType.STRING)
+	@Column(name = "mvp_side", length = 4)
+	private Side mvpSide;
+
+	@Column(name = "mvp_name", length = NAME_MAX)
+	private String mvpName;
+
+	@Column(name = "mvp_card_id")
+	private UUID mvpCardId;
+
 	@ElementCollection(fetch = FetchType.EAGER)
 	@CollectionTable(name = "report_goal", joinColumns = @JoinColumn(name = "report_id"))
 	@OrderColumn(name = "position")
@@ -64,7 +74,7 @@ class ScoreReport {
 	}
 
 	ScoreReport(UUID fixtureId, Kind kind, UUID reportedBy, int homeGoals, int awayGoals, String note,
-			List<Goal> goals) {
+			List<Goal> goals, Mvp mvp) {
 		this.id = UUID.randomUUID();
 		this.fixtureId = fixtureId;
 		this.kind = kind;
@@ -73,6 +83,11 @@ class ScoreReport {
 		this.awayGoals = (short) awayGoals;
 		this.note = note;
 		this.goals = new ArrayList<>(goals);
+		if (mvp != null) {
+			this.mvpSide = mvp.side();
+			this.mvpName = mvp.name();
+			this.mvpCardId = mvp.cardId();
+		}
 	}
 
 	UUID getId() {
@@ -111,12 +126,21 @@ class ScoreReport {
 		return goals;
 	}
 
+	/** The match MVP this report named, or null. */
+	Mvp getMvp() {
+		return mvpSide == null ? null : new Mvp(mvpSide, mvpName, mvpCardId);
+	}
+
 	enum Kind {
 		REPORT, DISPUTE, RESOLUTION, OVERRIDE, FORFEIT
 	}
 
 	enum Side {
 		HOME, AWAY
+	}
+
+	/** The match MVP: an approved card of that side's manager (name is a snapshot), or a typed name. */
+	record Mvp(Side side, String name, UUID cardId) {
 	}
 
 	/**
