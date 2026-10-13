@@ -2,6 +2,7 @@ import { Minus, Plus, X } from 'lucide-react'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Button } from '../../components/ui/Button'
 import { cn } from '../../lib/cn'
+import { ScreenshotPicker } from '../files/ScreenshotPicker'
 import type { SquadPlayer } from '../roster/useRoster'
 import type { Goal, Mvp, ScoreInput, Side } from './useSeason'
 
@@ -19,6 +20,8 @@ type ScoreFormProps = {
   onSubmit: (score: ScoreInput) => void
   /** Each side's approved cards. A side with cards picks scorers from them; a side without types names. */
   squads?: Partial<Record<Side, SquadPlayer[]>>
+  /** Set to the league slug to let the player attach up to three screenshots (reports and disputes). */
+  evidenceSlug?: string
 }
 
 const MAX_GOALS = 99
@@ -36,12 +39,14 @@ export function ScoreForm({
   pending,
   onSubmit,
   squads,
+  evidenceSlug,
 }: ScoreFormProps) {
   const [home, setHome] = useState(initial?.homeGoals ?? 0)
   const [away, setAway] = useState(initial?.awayGoals ?? 0)
   const [goals, setGoals] = useState<Goal[]>(initial?.goals ?? [])
   const [note, setNote] = useState(initial?.note ?? '')
   const [mvp, setMvp] = useState<Mvp | null>(initial?.mvp ?? null)
+  const [evidence, setEvidence] = useState<string[]>([])
 
   const count = (side: Side) => goals.filter((g) => g.side === side).length
   const squadOf = (side: Side) => squads?.[side] ?? []
@@ -76,6 +81,7 @@ export function ScoreForm({
       }),
       ...(withNote && note.trim() ? { note: note.trim() } : {}),
       mvp: mvpToSend(mvp, squadOf),
+      ...(evidenceSlug && evidence.length > 0 ? { evidenceUploadIds: evidence } : {}),
     })
   }
 
@@ -157,6 +163,17 @@ export function ScoreForm({
       </fieldset>
 
       <MvpPicker homeName={homeName} awayName={awayName} squads={{ HOME: squadOf('HOME'), AWAY: squadOf('AWAY') }} value={mvp} onChange={setMvp} />
+
+      {evidenceSlug && (
+        <ScreenshotPicker
+          slug={evidenceSlug}
+          purpose="DISPUTE_EVIDENCE"
+          label="Screenshots (optional)"
+          hint="The full-time screen helps if anyone disagrees. Up to 3, 5 MB each."
+          max={3}
+          onChange={setEvidence}
+        />
+      )}
 
       {withNote && (
         <div className="flex flex-col gap-2">

@@ -1,4 +1,4 @@
-# Development:  docker compose up -d db        (then run backend and frontend locally)
+# Development:  docker compose up -d db storage   (then run backend and frontend locally)
 # Full stack:   docker compose up --build      (app on http://localhost:3000)
 name: league-platform
 
@@ -19,6 +19,18 @@ services:
       timeout: 3s
       retries: 10
 
+  # S3-compatible storage for screenshots (SeaweedFS; MinIO no longer publishes images). Development only, with
+  # fixed credentials (league / league-secret, see docker/storage-s3.json). In production point STORAGE_* at a
+  # real bucket (S3, R2, B2, ...).
+  storage:
+    image: chrislusf/seaweedfs:4.48
+    command: server -s3 -dir=/data -s3.config=/etc/seaweedfs/s3.json
+    ports:
+      - "8333:8333"
+    volumes:
+      - storage-data:/data
+      - ./docker/storage-s3.json:/etc/seaweedfs/s3.json:ro
+
   backend:
     build: ./backend
     environment:
@@ -33,11 +45,18 @@ services:
       DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}
       DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET:-}
       APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:3000}
+      STORAGE_ENDPOINT: ${STORAGE_ENDPOINT:-http://storage:8333}
+      STORAGE_REGION: ${STORAGE_REGION:-us-east-1}
+      STORAGE_BUCKET: ${STORAGE_BUCKET:-league-uploads}
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:-league}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY:-league-secret}
     ports:
       - "8080:8080"
     depends_on:
       db:
         condition: service_healthy
+      storage:
+        condition: service_started
 
   frontend:
     build: ./frontend
@@ -48,3 +67,4 @@ services:
 
 volumes:
   db-data:
+  storage-data:

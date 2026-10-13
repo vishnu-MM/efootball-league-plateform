@@ -1,4 +1,4 @@
-import { Lock, LockOpen, Plus, Shirt, X } from 'lucide-react'
+import { Image, Lock, LockOpen, Plus, Shirt, X } from 'lucide-react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { Button } from '../../components/ui/Button'
@@ -6,7 +6,7 @@ import { ErrorState, Skeleton } from '../../components/ui/States'
 import { IconTile, Tile } from '../../components/ui/Tile'
 import { cn } from '../../lib/cn'
 import { CardRow, StatusChip } from './CardRow'
-import { CAP_TYPES, useRemoveCard, useRoster, type Roster } from './useRoster'
+import { CAP_TYPES, proofSrc, useRemoveCard, useRoster, type Roster } from './useRoster'
 
 /** The signed-in member's squad: cards and their status, how it measures against the rules, and what's wrong. */
 export function SquadTile({ slug, className }: { slug: string; className?: string }) {
@@ -69,6 +69,17 @@ export function SquadTile({ slug, className }: { slug: string; className?: strin
                 return (
                   <li key={entry.id} className="flex flex-col gap-1 py-3">
                     <CardRow card={entry.card}>
+                      {entry.hasProof && (
+                        <a
+                          href={proofSrc(slug, entry.id)}
+                          target="_blank"
+                          rel="noreferrer"
+                          aria-label={`Screenshot of ${entry.card.playerName}`}
+                          className="press grid size-9 shrink-0 place-items-center rounded-full bg-tile-soft"
+                        >
+                          <Image className="size-4" aria-hidden />
+                        </a>
+                      )}
                       <StatusChip status={entry.status} />
                       {canRemove && (
                         <button

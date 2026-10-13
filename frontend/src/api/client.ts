@@ -32,6 +32,19 @@ export async function getJson<T>(path: string): Promise<T> {
   return (await response.json()) as T
 }
 
+/** POSTs a multipart form (a file upload) with the CSRF token; the browser sets the content type. */
+export async function postForm<T>(path: string, form: FormData): Promise<T> {
+  const token = csrfToken()
+  const response = await fetch(path, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { Accept: 'application/json', ...(token && { 'X-XSRF-TOKEN': decodeURIComponent(token) }) },
+    body: form,
+  })
+  if (!response.ok) throw await toError(response)
+  return (await response.json()) as T
+}
+
 /** POST/PUT/DELETE with the CSRF token the backend expects. Returns undefined for 204 responses. */
 export async function send<T = void>(method: 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown): Promise<T> {
   const token = csrfToken()

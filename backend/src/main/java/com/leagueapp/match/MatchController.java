@@ -1,5 +1,6 @@
 package com.leagueapp.match;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -11,7 +12,11 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.leagueapp.files.Uploads;
 import com.leagueapp.identity.CurrentUser;
 
 @RestController
@@ -59,6 +65,18 @@ class MatchController {
 		return fixtureService.detail(slug, id, currentUser.id().orElse(null));
 	}
 
+	/** A screenshot attached to one of this match's reports: for the two players and owners/admins. */
+	@GetMapping("/api/leagues/{slug}/fixtures/{id}/evidence/{uploadId}")
+	ResponseEntity<InputStreamResource> evidence(@PathVariable String slug, @PathVariable UUID id,
+			@PathVariable UUID uploadId) {
+		Uploads.StoredImage image = fixtureService.evidence(slug, id, currentUser.requireId(), uploadId);
+		return ResponseEntity.ok()
+			.contentType(MediaType.parseMediaType(image.contentType()))
+			.contentLength(image.size())
+			.cacheControl(CacheControl.maxAge(Duration.ofHours(1)).cachePrivate())
+			.body(new InputStreamResource(image.stream()));
+	}
+
 	@PostMapping("/api/leagues/{slug}/fixtures/{id}/report")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	void report(@PathVariable String slug, @PathVariable UUID id, @Valid @RequestBody ScoreRequest body) {
@@ -88,7 +106,7 @@ class MatchController {
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	void override(@PathVariable String slug, @PathVariable UUID id, @Valid @RequestBody OverrideRequest body) {
 		fixtureService.override(slug, id, currentUser.requireId(),
-				new ScoreInput(body.homeGoals(), body.awayGoals(), body.goals(), body.reason(), body.mvp()));
+				new ScoreInput(body.homeGoals(), body.awayGoals(), body.goals(), body.reason(), body.mvp(), List.of()));
 	}
 
 	/** Owner/admin: settle a fixture as forfeited by one side (3–0 unless a score is given) or both (0–0). */
@@ -142,10 +160,11 @@ class MatchController {
 
 	record ScoreRequest(@Min(0) @Max(ScoreInput.MAX_GOALS) int homeGoals, @Min(0) @Max(ScoreInput.MAX_GOALS) int awayGoals,
 			@Size(max = 2 * ScoreInput.MAX_GOALS) List<ScoreInput.GoalInput> goals,
-			@Size(max = ScoreReport.NOTE_MAX) String note, ScoreInput.MvpInput mvp) {
+			@Size(max = ScoreReport.NOTE_MAX) String note, ScoreInput.MvpInput mvp,
+			@Size(max = ScoreInput.MAX_EVIDENCE) List<UUID> evidenceUploadIds) {
 
 		ScoreInput toInput() {
-			return new ScoreInput(homeGoals, awayGoals, goals, note, mvp);
+			return new ScoreInput(homeGoals, awayGoals, goals, note, mvp, evidenceUploadIds);
 		}
 
 	}

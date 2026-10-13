@@ -3,6 +3,7 @@ package com.leagueapp.match;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -12,9 +13,24 @@ import org.springframework.web.server.ResponseStatusException;
  * A score as entered: goals per side, optional scorers (with optional assists), optional note. A side whose manager
  * has approved squad cards picks scorers from them by id; a side without one types names.
  */
-record ScoreInput(int homeGoals, int awayGoals, List<GoalInput> goals, String note, MvpInput mvp) {
+record ScoreInput(int homeGoals, int awayGoals, List<GoalInput> goals, String note, MvpInput mvp,
+		List<UUID> evidence) {
 
 	static final int MAX_GOALS = 99;
+
+	static final int MAX_EVIDENCE = 3;
+
+	/** Screenshot upload ids, without duplicates; at most three. */
+	List<UUID> cleanEvidence() {
+		if (evidence == null) {
+			return List.of();
+		}
+		List<UUID> ids = evidence.stream().filter(Objects::nonNull).distinct().toList();
+		if (ids.size() > MAX_EVIDENCE) {
+			throw badRequest("Add up to " + MAX_EVIDENCE + " screenshots");
+		}
+		return ids;
+	}
 
 	/**
 	 * Checks the score and turns the scorers into goals to store.

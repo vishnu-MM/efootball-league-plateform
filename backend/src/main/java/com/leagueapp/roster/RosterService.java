@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.leagueapp.files.Uploads;
 import com.leagueapp.league.LeagueRole;
 import com.leagueapp.league.LeagueService;
 import com.leagueapp.league.LeagueService.LeagueAccess;
@@ -29,14 +30,16 @@ class RosterService {
 	private final Squads squads;
 	private final CardRepository cards;
 	private final SquadCardRepository squadCards;
+	private final Uploads uploads;
 	private final ApplicationEventPublisher events;
 
 	RosterService(LeagueService leagueService, Squads squads, CardRepository cards, SquadCardRepository squadCards,
-			ApplicationEventPublisher events) {
+			Uploads uploads, ApplicationEventPublisher events) {
 		this.leagueService = leagueService;
 		this.squads = squads;
 		this.cards = cards;
 		this.squadCards = squadCards;
+		this.uploads = uploads;
 		this.events = events;
 	}
 
@@ -53,7 +56,7 @@ class RosterService {
 		Long pending = league.canManage()
 				? squadCards.countByLeagueIdAndStatus(league.leagueId(), SquadCard.Status.PENDING)
 				: null;
-		return new RosterView(rules.rules(), rules.isWindowOpen(), league.canManage(),
+		return new RosterView(rules.rules(), rules.isRequireCardProof(), rules.isWindowOpen(), league.canManage(),
 				league.viewerRole() == LeagueRole.OWNER, mine, live.size(), SquadRuleChecker.capUsage(rules.rules(), live),
 				SquadRuleChecker.problems(rules.rules(), live), flagged(league.leagueId(), rules.rules()), pending);
 	}
@@ -93,7 +96,15 @@ class RosterService {
 		if (!problems.isEmpty()) {
 			throw conflict("Adding this card would break the squad rules: " + String.join("; ", problems));
 		}
-		SquadCard added = squadCards.save(new SquadCard(league.leagueId(), viewerId, card));
+		if (rules.isRequireCardProof() && request.proofUploadId() == null) {
+			throw conflict("This league needs a screenshot of each new card. Add one to show you own it.");
+		}
+		SquadCard added = new SquadCard(league.leagueId(), viewerId, card);
+		if (request.proofUploadId() != null) {
+			uploads.attach(league.leagueId(), viewerId, Uploads.Purpose.CARD_PROOF, List.of(request.proofUploadId()));
+			added.attachProof(request.proofUploadId());
+		}
+		squadCards.save(added);
 		events.publishEvent(
 				new RosterEvents.CardSubmitted(league.leagueId(), viewerId, added.getId(), card.getPlayerName()));
 		return added;
@@ -149,10 +160,12 @@ class RosterService {
 
 	/** Saves the rules even if some squads now break them; returns the squads that do. Owner only. */
 	@Transactional
-	List<FlaggedSquad> saveRules(String slug, UUID viewerId, SquadRuleChecker.Rules rules) {
+	List<FlaggedSquad> saveRules(String slug, UUID viewerId, SquadRuleChecker.Rules rules, boolean requireCardProof) {
 		LeagueAccess league = requireOwner(slug, viewerId);
 		validate(rules);
-		squads.lock(league.leagueId()).change(rules);
+		SquadRules current = squads.lock(league.leagueId());
+		current.change(rules);
+		current.setRequireCardProof(requireCardProof);
 		events.publishEvent(new RosterEvents.SquadRulesChanged(league.leagueId(), viewerId));
 		return flagged(league.leagueId(), rules);
 	}
@@ -162,6 +175,16 @@ class RosterService {
 	void setWindow(String slug, UUID viewerId, boolean open) {
 		LeagueAccess league = requireManager(slug, viewerId);
 		squads.setWindow(league.leagueId(), viewerId, open);
+	}
+
+	/** A card's proof screenshot: for its manager, and for owners and admins (who approve cards). */
+	Uploads.StoredImage proof(String slug, UUID viewerId, UUID squadCardId) {
+		LeagueAccess league = requireMember(slug, viewerId);
+		SquadCard card = squadCards.findByIdAndLeagueId(squadCardId, league.leagueId())
+			.filter(c -> c.getUserId().equals(viewerId) || league.canManage())
+			.filter(c -> c.getProofUploadId() != null)
+			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No screenshot for this card"));
+		return uploads.open(card.getProofUploadId());
 	}
 
 	/** A member's approved squad, for anyone who can see the league. */
@@ -269,10 +292,11 @@ class RosterService {
 		return new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
 	}
 
-	record NewCard(UUID cardId, String playerName, CardType cardType, Integer rating, Position position) {
+	record NewCard(UUID cardId, String playerName, CardType cardType, Integer rating, Position position,
+			UUID proofUploadId) {
 	}
 
-	record RosterView(SquadRuleChecker.Rules rules, boolean windowOpen, boolean canManage, boolean isOwner,
+	record RosterView(SquadRuleChecker.Rules rules, boolean requireCardProof, boolean windowOpen, boolean canManage, boolean isOwner,
 			List<SquadCard> myCards, int mySize, Integer myCapUsage, List<String> myProblems, List<FlaggedSquad> flagged,
 			Long pendingCount) {
 	}

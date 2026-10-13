@@ -15,8 +15,8 @@
 | Leaderboards | Goals, assists and MVPs for the active (or latest) season, counted from final results only. Squad cards are grouped by squad card; typed names by manager + name (ignoring case). |
 | Notifications | An inbox per user, for things that concern them (see the table below). Read/unread; no email (Phase 4). |
 | Live updates | One Server-Sent Events stream per signed-in tab. The server pushes small "this changed" events and the app refetches. Single backend instance (in-memory connection registry). |
-| Discord | Owner pastes a Discord channel webhook URL and ticks which event types to post (all on by default); "Send test message". Delivery happens after commit, never inside a score report. |
-| Storage | S3-compatible API. MinIO in docker-compose for development; any S3/R2/B2 bucket in production via environment variables. |
+| Discord | Owner pastes a Discord channel webhook URL and ticks which event types to post (all on by default); "Send test message". Delivery happens after commit, never inside a score report. A failed post is recorded and shown, not retried. Posts never ping anyone. |
+| Storage | S3-compatible API. SeaweedFS in docker-compose for development (MinIO stopped publishing images in 2025); any S3/R2/B2 bucket in production via environment variables. |
 | Screenshots | PNG, JPEG or WebP, up to 5 MB, checked by their first bytes. Dispute evidence: up to 3 per report or dispute. Card proof: one per card; the owner can **require** it for new cards (off by default). |
 
 ## Features
@@ -47,9 +47,9 @@ Logged: dispute resolved, result overridden, forfeit, points deducted, deduction
 | Card submitted | owner/admins |
 | Card approved / rejected | the card's manager |
 | Season started / completed | its participants |
-| Transfer window opened / closed | all members |
+| Transfer window opened / closed by an admin | all members |
 
-The actor is never notified of their own action.
+The actor is never notified of their own action. The window opening or closing on its own (a season starting or ending) isn't notified: the season notification covers it.
 
 1. **Bell** in the app header with the unread count; **Notifications page** (`/notifications`) with *Mark all read*. Opening a notification marks it read and goes to its link.
 2. **Live updates.** While the app is open, a new notification bumps the bell straight away, and pages showing the league (season, fixture, standings, roster, log, stats) refresh when something changes in it.
@@ -85,7 +85,7 @@ Modules and their one-way dependencies:
 league ← files ← roster ← match ← standings
                      ↖      ↖  ↖
                        activity  stats
-                           notify (listens to league, roster, match events)
+                           notify, discord (listen to roster and match events)
 ```
 
 - **Events.** `match` and `roster` publish domain events (public records in their base package) from the methods that change state: `ResultReported`, `ResultConfirmed`, `DisputeOpened`, `DisputeResolved`, `ResultOverridden`, `ForfeitAwarded`, `PointsDeducted`, `DeductionRevoked`, `SeasonStarted`, `SeasonCompleted`, `CardSubmitted`, `CardDecided`, `SquadRulesChanged`, `TransferWindowChanged`. Each carries the league id, actor and the ids involved.
@@ -94,7 +94,8 @@ league ← files ← roster ← match ← standings
 - **stats** reads final results with goals and MVPs from `match`'s `MatchResults` and card details from `roster`'s `Squads`, and computes leaderboards on read (like standings). `LeaderboardCalculator` is plain Java.
 - **files** stores uploads in S3 (AWS SDK v2, path-style for MinIO). The backend receives the multipart upload, checks it, and streams it to the bucket; images are read back through the backend (so the bucket never needs to be public or reachable from the browser). `roster` and `match` keep upload ids and ask `files` to attach them (an upload can be attached once, by its uploader, in the same league). Unattached uploads older than 24 hours are deleted by a scheduled job.
 - **match:** `ResultRules` gains `OVERRIDE` and `FORFEIT`. `score_report.kind` gains `OVERRIDE` and `FORFEIT`; `fixture` gains `forfeit` (null, `HOME`, `AWAY`, `BOTH`: who forfeited). Point deductions live in `match` (they belong to a season). `MatchResults` exposes deductions and goal/MVP details for `standings` and `stats`.
-- **SSE:** `GET /api/stream` returns an `SseEmitter` (no timeout, heartbeat comment every 25 s). The registry maps user → emitters. Events: `notification` (`{unread}`) and `league` (`{slug, topics}`, where topics are `season`, `standings`, `fixture:<id>`, `roster`, `log`, `stats`), sent to connected members of that league. nginx gets `proxy_buffering off` for `/api/stream`.
+- **SSE:** `GET /api/stream` returns an `SseEmitter` (ends after 30 minutes and the browser reconnects; heartbeat comment every 25 s). The registry maps user → emitters. Events: `notification` (`{unread}`) and `league` (`{slug}`), sent to connected members of that league; the app refetches every query about that league. nginx already has `proxy_buffering off` for `/api/`.
+- **discord** is its own module (listens after commit like notify). Requests only go to the configured Discord base URL; only the webhook path is taken from the saved URL.
 
 **Database:**
 - `V7`: `score_report.kind` adds `OVERRIDE`, `FORFEIT`; `fixture.forfeit`; `point_adjustment` (season, user, points, reason, created by/at, revoked by/at/reason); `league_activity` (league, created at, actor, type, summary, reason, fixture id, subject user id).
@@ -114,7 +115,8 @@ league ← files ← roster ← match ← standings
 - `GET /api/notifications?before=`, `GET /api/notifications/unread-count`, `POST /api/notifications/read` `{ids}` (empty = all)
 - `GET /api/stream`: SSE (signed in)
 - `GET` / `PUT` / `DELETE /api/leagues/{slug}/discord`, `POST /api/leagues/{slug}/discord/test` (owner)
-- `POST /api/leagues/{slug}/uploads` (multipart `file`, `purpose`: `CARD_PROOF` | `DISPUTE_EVIDENCE`) → `{id}`; `GET /api/leagues/{slug}/uploads/{id}` streams the image to those allowed to see it
+- `POST /api/leagues/{slug}/uploads` (multipart `file`, `purpose`: `CARD_PROOF` | `DISPUTE_EVIDENCE`) → `{id}`
+- `GET /api/leagues/{slug}/squad/cards/{id}/proof` (the card's manager, owner/admins) and `GET /api/leagues/{slug}/fixtures/{id}/evidence/{uploadId}` (the two players, owner/admins) stream the image
 - Score bodies gain `mvp` `{side, cardId?, name?}` and `evidenceUploadIds` (report and dispute); add-card gains `proofUploadId`; squad rules gain `requireCardProof`
 
 Errors follow Phases 1–2: 400 bad input (missing reason, wrong file type, too big), 403/404 for permissions, 409 for state (season closed, result not final for override, proof required).
@@ -129,7 +131,7 @@ Errors follow Phases 1–2: 400 bad input (missing reason, wrong file type, too 
 
 ## Configuration
 
-`STORAGE_ENDPOINT`, `STORAGE_REGION`, `STORAGE_BUCKET`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY` (defaults point at the docker-compose MinIO). The backend creates the bucket on startup if it is missing.
+`STORAGE_ENDPOINT`, `STORAGE_REGION`, `STORAGE_BUCKET`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY` (defaults point at the docker-compose SeaweedFS, whose dev credentials are in `docker/storage-s3.json`). The backend creates the bucket on startup if it is missing. `APP_PUBLIC_URL` is the address used in Discord links.
 
 ## Not in Phase 3
 
@@ -142,6 +144,6 @@ Each step ships with its tests and leaves the app runnable: (1) overrides, forfe
 ## Testing
 
 - Unit: `ResultRules` (override/forfeit by state and role), `StandingsCalculator` with deductions and forfeits, `LeaderboardCalculator` (cards vs typed names, ties, forfeits excluded), Discord message formatting, image type sniffing.
-- API: override/forfeit/deduction permissions and 409s, season completing through a forfeit, log entries and visibility, MVP validation, stats, notification recipients and read state, SSE stream delivers an event, Discord settings validation and delivery (local HTTP stub), uploads with a MinIO Testcontainer (type, size, visibility, attach once, require proof).
+- API: override/forfeit/deduction permissions and 409s, season completing through a forfeit, log entries and visibility, MVP validation, stats, notification recipients and read state, SSE stream delivers an event, Discord settings validation and delivery (local HTTP stub), uploads with a SeaweedFS Testcontainer (type, visibility, attach once, require proof).
 - Modulith verification with the new modules.
 - A browser run-through: dispute with screenshots → resolve → override → forfeit → deduction; log, leaderboards, bell and live refresh across two browsers; Discord test message.

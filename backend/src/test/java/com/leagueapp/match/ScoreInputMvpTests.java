@@ -46,7 +46,7 @@ class ScoreInputMvpTests {
 	}
 
 	private static ScoreInput input(ScoreInput.MvpInput mvp) {
-		return new ScoreInput(1, 0, List.of(), null, mvp);
+		return new ScoreInput(1, 0, List.of(), null, mvp, List.of());
 	}
 
 }

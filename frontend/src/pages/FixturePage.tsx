@@ -9,10 +9,12 @@ import { Button } from '../components/ui/Button'
 import { EmptyState, ErrorState, Skeleton } from '../components/ui/States'
 import { IconTile, Tile } from '../components/ui/Tile'
 import { useMe } from '../features/auth/useAuth'
+import { Thumbnail } from '../features/files/Thumbnail'
 import { CorrectionsTile } from '../features/match/CorrectionsTile'
 import { ScoreText, StatusChip } from '../features/match/FixtureRow'
 import { ScoreForm } from '../features/match/ScoreForm'
 import {
+  evidenceSrc,
   formatPlayBy,
   useFixture,
   useFixtureAction,
@@ -82,7 +84,7 @@ export function FixturePage() {
           </h2>
           <ol className="flex flex-col gap-3">
             {data.reports.map((report) => (
-              <ReportCard key={report.id} report={report} detail={data} />
+              <ReportCard key={report.id} slug={slug} report={report} detail={data} />
             ))}
           </ol>
         </Tile>
@@ -114,7 +116,7 @@ function FixtureCorrections({ slug, detail, className }: { slug: string; detail:
   )
 }
 
-function ReportCard({ report, detail }: { report: Report; detail: FixtureDetail }) {
+function ReportCard({ slug, report, detail }: { slug: string; report: Report; detail: FixtureDetail }) {
   const { fixture } = detail
   const isFinal = report.id === detail.finalReportId
   const scorers = (side: 'HOME' | 'AWAY') => report.goals.filter((g) => g.side === side)
@@ -147,6 +149,13 @@ function ReportCard({ report, detail }: { report: Report; detail: FixtureDetail 
                 </li>
               ))}
             </ul>
+          ))}
+        </div>
+      )}
+      {report.evidence.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {report.evidence.map((id, i) => (
+            <Thumbnail key={id} src={evidenceSrc(slug, fixture.id, id)} alt={`Screenshot ${i + 1} from ${report.reportedByName}`} />
           ))}
         </div>
       )}
@@ -186,6 +195,7 @@ function ActionTile({ slug, detail, className }: { slug: string; detail: Fixture
         awayName={fixture.away.name}
         submitLabel="Report score"
         pendingLabel="Reporting…"
+        evidenceSlug={slug}
         pending={act.isPending}
         squads={squads}
         onSubmit={(score) => run({ action: 'report', score }, 'Score reported. Waiting for confirmation.')}
@@ -226,6 +236,7 @@ function ActionTile({ slug, detail, className }: { slug: string; detail: Fixture
           withNote
           submitLabel="Send dispute"
           pendingLabel="Sending…"
+          evidenceSlug={slug}
           pending={act.isPending}
           squads={squads}
           onSubmit={(score) => run({ action: 'dispute', score }, 'Dispute sent to the league admins')}

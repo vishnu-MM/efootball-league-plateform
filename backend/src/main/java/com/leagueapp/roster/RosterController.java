@@ -1,5 +1,6 @@
 package com.leagueapp.roster;
 
+import java.time.Duration;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -11,7 +12,11 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.leagueapp.files.Uploads;
 import com.leagueapp.identity.CurrentUser;
 
 @RestController
@@ -50,7 +56,8 @@ class RosterController {
 	@ResponseStatus(HttpStatus.CREATED)
 	SquadCardResponse add(@PathVariable String slug, @Valid @RequestBody AddCardRequest body) {
 		return SquadCardResponse.from(rosterService.add(slug, currentUser.requireId(),
-				new RosterService.NewCard(body.cardId(), body.playerName(), body.cardType(), body.rating(), body.position())));
+				new RosterService.NewCard(body.cardId(), body.playerName(), body.cardType(), body.rating(), body.position(),
+						body.proofUploadId())));
 	}
 
 	@DeleteMapping("/api/leagues/{slug}/squad/cards/{id}")
@@ -63,8 +70,19 @@ class RosterController {
 	List<PendingCardResponse> approvals(@PathVariable String slug) {
 		return rosterService.approvals(slug, currentUser.requireId()).stream()
 			.map(p -> new PendingCardResponse(p.squadCard().getId(), p.squadCard().getUserId(), p.teamName(),
-					CardResponse.from(p.squadCard().getCard())))
+					CardResponse.from(p.squadCard().getCard()), p.squadCard().getProofUploadId() != null))
 			.toList();
+	}
+
+	/** The card's proof screenshot, for its manager and for owners/admins. */
+	@GetMapping("/api/leagues/{slug}/squad/cards/{id}/proof")
+	ResponseEntity<InputStreamResource> proof(@PathVariable String slug, @PathVariable UUID id) {
+		Uploads.StoredImage image = rosterService.proof(slug, currentUser.requireId(), id);
+		return ResponseEntity.ok()
+			.contentType(MediaType.parseMediaType(image.contentType()))
+			.contentLength(image.size())
+			.cacheControl(CacheControl.maxAge(Duration.ofHours(1)).cachePrivate())
+			.body(new InputStreamResource(image.stream()));
 	}
 
 	@PostMapping("/api/leagues/{slug}/squad/cards/{id}/approve")
@@ -86,7 +104,8 @@ class RosterController {
 
 	@PutMapping("/api/leagues/{slug}/squad-rules")
 	FlaggedResponse saveRules(@PathVariable String slug, @Valid @RequestBody RulesRequest body) {
-		return new FlaggedResponse(rosterService.saveRules(slug, currentUser.requireId(), body.toRules()));
+		return new FlaggedResponse(rosterService.saveRules(slug, currentUser.requireId(), body.toRules(),
+				Boolean.TRUE.equals(body.requireCardProof())));
 	}
 
 	@PutMapping("/api/leagues/{slug}/transfer-window")
@@ -101,14 +120,14 @@ class RosterController {
 	}
 
 	record AddCardRequest(UUID cardId, @Size(max = Card.NAME_MAX) String playerName, CardType cardType,
-			@Min(Card.RATING_MIN) @Max(Card.RATING_MAX) Integer rating, Position position) {
+			@Min(Card.RATING_MIN) @Max(Card.RATING_MAX) Integer rating, Position position, UUID proofUploadId) {
 	}
 
 	record RejectRequest(@Size(max = SquadCard.REASON_MAX) String reason) {
 	}
 
 	record RulesRequest(@Min(1) @Max(100) Integer maxSquadSize, @NotNull CapType capType,
-			@Min(1) @Max(100_000) Integer capValue, Set<CardType> bannedCardTypes) {
+			@Min(1) @Max(100_000) Integer capValue, Set<CardType> bannedCardTypes, Boolean requireCardProof) {
 
 		SquadRuleChecker.Rules toRules() {
 			Set<CardType> banned = bannedCardTypes == null || bannedCardTypes.isEmpty() ? EnumSet.noneOf(CardType.class)
@@ -121,10 +140,12 @@ class RosterController {
 	record WindowRequest(@NotNull Boolean open) {
 	}
 
-	record RulesResponse(Integer maxSquadSize, CapType capType, Integer capValue, Set<CardType> bannedCardTypes) {
+	record RulesResponse(Integer maxSquadSize, CapType capType, Integer capValue, Set<CardType> bannedCardTypes,
+			boolean requireCardProof) {
 
-		static RulesResponse from(SquadRuleChecker.Rules rules) {
-			return new RulesResponse(rules.maxSize(), rules.capType(), rules.capValue(), rules.banned());
+		static RulesResponse from(SquadRuleChecker.Rules rules, boolean requireCardProof) {
+			return new RulesResponse(rules.maxSize(), rules.capType(), rules.capValue(), rules.banned(),
+					requireCardProof);
 		}
 
 	}
@@ -138,11 +159,12 @@ class RosterController {
 
 	}
 
-	record SquadCardResponse(UUID id, SquadCard.Status status, String rejectReason, CardResponse card) {
+	record SquadCardResponse(UUID id, SquadCard.Status status, String rejectReason, CardResponse card,
+			boolean hasProof) {
 
 		static SquadCardResponse from(SquadCard squadCard) {
 			return new SquadCardResponse(squadCard.getId(), squadCard.getStatus(), squadCard.getRejectReason(),
-					CardResponse.from(squadCard.getCard()));
+					CardResponse.from(squadCard.getCard()), squadCard.getProofUploadId() != null);
 		}
 
 	}
@@ -154,7 +176,7 @@ class RosterController {
 			MySquadResponse mySquad, List<RosterService.FlaggedSquad> flagged, Long pendingCount) {
 
 		static RosterResponse from(RosterService.RosterView view) {
-			return new RosterResponse(RulesResponse.from(view.rules()), view.windowOpen(), view.canManage(),
+			return new RosterResponse(RulesResponse.from(view.rules(), view.requireCardProof()), view.windowOpen(), view.canManage(),
 					view.isOwner(),
 					new MySquadResponse(view.myCards().stream().map(SquadCardResponse::from).toList(), view.mySize(),
 							view.myCapUsage(), view.myProblems()),
@@ -163,7 +185,7 @@ class RosterController {
 
 	}
 
-	record PendingCardResponse(UUID id, UUID userId, String teamName, CardResponse card) {
+	record PendingCardResponse(UUID id, UUID userId, String teamName, CardResponse card, boolean hasProof) {
 	}
 
 	record FlaggedResponse(List<RosterService.FlaggedSquad> flagged) {

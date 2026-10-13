@@ -44,6 +44,7 @@ function RulesForm({ slug, leagueName, initial }: { slug: string; leagueName: st
   const [capType, setCapType] = useState<CapType>(initial.capType)
   const [capValue, setCapValue] = useState(initial.capValue?.toString() ?? '')
   const [banned, setBanned] = useState<Set<CardType>>(() => new Set(initial.bannedCardTypes))
+  const [requireProof, setRequireProof] = useState(Boolean(initial.requireCardProof))
   const [flagged, setFlagged] = useState<FlaggedSquad[] | null>(null)
 
   const size = maxSize.trim() ? Number.parseInt(maxSize, 10) : null
@@ -55,6 +56,7 @@ function RulesForm({ slug, leagueName, initial }: { slug: string; leagueName: st
     capType,
     capValue: capType === 'NONE' ? null : cap,
     bannedCardTypes: [...banned],
+    requireCardProof: requireProof,
   }
 
   function toggle(type: CardType) {
@@ -170,6 +172,19 @@ function RulesForm({ slug, leagueName, initial }: { slug: string; leagueName: st
                 })}
               </ul>
             </fieldset>
+
+            <label className="flex items-start gap-3 rounded-inner bg-tile-soft p-4 text-sm">
+              <input
+                type="checkbox"
+                checked={requireProof}
+                onChange={(e) => setRequireProof(e.target.checked)}
+                className="mt-0.5 size-5 shrink-0 accent-ink"
+              />
+              <span>
+                Require a screenshot for new cards
+                <span className="block text-xs text-tile-muted">Cards already in squads aren't affected.</span>
+              </span>
+            </label>
 
             {error && <ErrorState message={error.message} />}
 

@@ -65,6 +65,8 @@ export type Report = {
   createdAt: string
   goals: Goal[]
   mvp: Mvp | null
+  /** Screenshot upload ids; only filled in for the two players and owners/admins. */
+  evidence: string[]
 }
 
 export type FixtureDetail = {
@@ -97,7 +99,18 @@ export type Standings = {
   deductions: Deduction[]
 }
 
-export type ScoreInput = { homeGoals: number; awayGoals: number; goals: Goal[]; note?: string; mvp?: Mvp | null }
+export type ScoreInput = {
+  homeGoals: number
+  awayGoals: number
+  goals: Goal[]
+  note?: string
+  mvp?: Mvp | null
+  evidenceUploadIds?: string[]
+}
+
+/** Where a report's screenshot can be loaded (for the two players and owners/admins). */
+export const evidenceSrc = (slug: string, fixtureId: string, uploadId: string) =>
+  `/api/leagues/${encodeURIComponent(slug)}/fixtures/${encodeURIComponent(fixtureId)}/evidence/${encodeURIComponent(uploadId)}`
 
 export type NewSeason = {
   name?: string

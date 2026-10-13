@@ -1,13 +1,15 @@
 # League Platform
 
 Custom-league manager for mobile football communities: leagues, rosters, fixtures, score reporting with
-opponent confirmation, standings and admin overrides with an audit log.
+opponent confirmation, standings, admin overrides with a league log, leaderboards, notifications (in-app, live and
+Discord) and screenshot proof.
 
 | Part     | Stack                                                                 |
 |----------|-----------------------------------------------------------------------|
 | Frontend | React 19, Vite, TypeScript, TanStack Query, vite-plugin-pwa           |
 | Backend  | Spring Boot 4.1, Java 21, Spring Security, JPA, Flyway, Spring Modulith |
 | Database | PostgreSQL 17 (Docker)                                                |
+| Storage  | Any S3-compatible bucket for screenshots (SeaweedFS in Docker)        |
 
 ## Prerequisites
 
@@ -26,8 +28,8 @@ Open http://localhost:3000. The API is also exposed on http://localhost:8080.
 ## Develop locally (hot reload)
 
 ```bash
-# 1. Database only
-docker compose up -d db
+# 1. Database and screenshot storage only
+docker compose up -d db storage
 
 # 2. Backend (http://localhost:8080) — Flyway creates the tables on startup
 cd backend
@@ -113,4 +115,24 @@ Squads (cards, approvals, rules and the transfer window):
 - `PUT /api/leagues/{slug}/squad-rules`, `POST …/squad-rules/check` — set the rules, or preview who they flag (owner)
 - `PUT /api/leagues/{slug}/transfer-window` — open or close the window (owner/admin)
 - `GET /api/public/leagues/{slug}/squads/{userId}` — a member's approved squad
+
+Corrections, the league log and leaderboards:
+
+- `POST /api/leagues/{slug}/fixtures/{id}/override` | `forfeit` — correct a result, with a reason (owner/admin, active season)
+- `POST /api/leagues/{slug}/deductions`, `POST …/deductions/{id}/revoke` — take points or give them back (owner/admin)
+- `GET /api/public/leagues/{slug}/log?before=&adminOnly=` — the league log, newest first
+- `GET /api/public/leagues/{slug}/stats` — top scorers, assists and MVPs of the active (or latest) season
+
+Notifications, live updates and Discord:
+
+- `GET /api/notifications?before=`, `GET /api/notifications/unread-count`, `POST /api/notifications/read` — your inbox
+- `GET /api/stream` — Server-Sent Events: `notification` (unread count) and `league` (something in a league changed)
+- `GET` / `PUT` / `DELETE /api/leagues/{slug}/discord`, `POST …/discord/test` — the league's Discord webhook (owner)
+
+Screenshots:
+
+- `POST /api/leagues/{slug}/uploads` — upload a PNG/JPEG/WebP (max 5 MB, multipart `file` + `purpose`), then pass its id
+  as `proofUploadId` when adding a card or in `evidenceUploadIds` when reporting or disputing a score
+- `GET /api/leagues/{slug}/squad/cards/{id}/proof`, `GET /api/leagues/{slug}/fixtures/{id}/evidence/{uploadId}` — view one
+
 - `GET /actuator/health` — health check

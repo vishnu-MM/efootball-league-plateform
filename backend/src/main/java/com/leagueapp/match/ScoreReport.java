@@ -65,6 +65,13 @@ class ScoreReport {
 	@Column(name = "mvp_card_id")
 	private UUID mvpCardId;
 
+	/** Screenshots backing up a report or dispute (upload ids, in the order they were added). */
+	@ElementCollection(fetch = FetchType.EAGER)
+	@CollectionTable(name = "report_evidence", joinColumns = @JoinColumn(name = "report_id"))
+	@OrderColumn(name = "position")
+	@Column(name = "upload_id")
+	private List<UUID> evidence = new ArrayList<>();
+
 	@ElementCollection(fetch = FetchType.EAGER)
 	@CollectionTable(name = "report_goal", joinColumns = @JoinColumn(name = "report_id"))
 	@OrderColumn(name = "position")
@@ -124,6 +131,14 @@ class ScoreReport {
 
 	List<Goal> getGoals() {
 		return goals;
+	}
+
+	List<UUID> getEvidence() {
+		return evidence;
+	}
+
+	void addEvidence(List<UUID> uploadIds) {
+		evidence.addAll(uploadIds);
 	}
 
 	/** The match MVP this report named, or null. */

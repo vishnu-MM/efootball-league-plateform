@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.leagueapp.files.Uploads;
 import com.leagueapp.league.LeagueService;
 import com.leagueapp.league.LeagueService.LeagueAccess;
 import com.leagueapp.roster.Squads;
@@ -35,11 +36,12 @@ class FixtureService {
 	private final ScoreReportRepository reports;
 	private final TeamNames teamNames;
 	private final Squads squads;
+	private final Uploads uploads;
 	private final ApplicationEventPublisher events;
 
 	FixtureService(LeagueService leagueService, SeasonRepository seasons, SeasonParticipantRepository participants,
 			FixtureRepository fixtures, ScoreReportRepository reports, TeamNames teamNames, Squads squads,
-			ApplicationEventPublisher events) {
+			Uploads uploads, ApplicationEventPublisher events) {
 		this.leagueService = leagueService;
 		this.seasons = seasons;
 		this.participants = participants;
@@ -47,6 +49,7 @@ class FixtureService {
 		this.reports = reports;
 		this.teamNames = teamNames;
 		this.squads = squads;
+		this.uploads = uploads;
 		this.events = events;
 	}
 
@@ -62,11 +65,30 @@ class FixtureService {
 
 		FixtureSummary summary = FixtureSummary.of(fixture, names, pendingReport(fixture, history), viewerId,
 				league.canManage(), season.isActive());
+		boolean seesEvidence = canSeeEvidence(fixture, league, viewerId);
 		List<ReportView> reportViews = history.stream()
 			.map(r -> new ReportView(r.getId(), r.getKind(), r.getReportedBy(), names.getOrDefault(r.getReportedBy(), "Player"),
-					r.getHomeGoals(), r.getAwayGoals(), r.getNote(), r.getCreatedAt(), List.copyOf(r.getGoals()), r.getMvp()))
+					r.getHomeGoals(), r.getAwayGoals(), r.getNote(), r.getCreatedAt(), List.copyOf(r.getGoals()), r.getMvp(),
+					seesEvidence ? List.copyOf(r.getEvidence()) : List.of()))
 			.toList();
 		return new FixtureDetail(summary, season.getName(), reportViews, fixture.getFinalReportId());
+	}
+
+	/** A screenshot from one of this fixture's reports, for the two players and owners/admins. */
+	Uploads.StoredImage evidence(String slug, UUID fixtureId, UUID viewerId, UUID uploadId) {
+		LeagueAccess league = leagueService.access(slug, viewerId);
+		Fixture fixture = fixtures.findById(fixtureId).orElseThrow(FixtureService::notFound);
+		seasonOf(fixture, league);
+		boolean attachedHere = reports.findByFixtureIdOrderByCreatedAtAsc(fixtureId).stream()
+			.anyMatch(r -> r.getEvidence().contains(uploadId));
+		if (!attachedHere || !canSeeEvidence(fixture, league, viewerId)) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Screenshot not found");
+		}
+		return uploads.open(uploadId);
+	}
+
+	private static boolean canSeeEvidence(Fixture fixture, LeagueAccess league, UUID viewerId) {
+		return viewerId != null && (fixture.involves(viewerId) || league.canManage());
 	}
 
 	/** A player enters the score. The fixture then waits for the opponent (or an admin) to confirm it. */
@@ -256,8 +278,17 @@ class FixtureService {
 				ScoreReport.Side.HOME, squadNames(leagueId, fixture.getHomeUserId()),
 				ScoreReport.Side.AWAY, squadNames(leagueId, fixture.getAwayUserId()));
 		List<ScoreReport.Goal> goals = score.validGoals(sideSquads);
-		return new ScoreReport(fixture.getId(), kind, actorId, score.homeGoals(), score.awayGoals(), score.cleanNote(),
-				goals, score.validMvp(sideSquads));
+		ScoreReport report = new ScoreReport(fixture.getId(), kind, actorId, score.homeGoals(), score.awayGoals(),
+				score.cleanNote(), goals, score.validMvp(sideSquads));
+		List<UUID> evidence = score.cleanEvidence();
+		if (!evidence.isEmpty()) {
+			if (kind != ScoreReport.Kind.REPORT && kind != ScoreReport.Kind.DISPUTE) {
+				throw badRequest("Screenshots go with a report or a dispute");
+			}
+			uploads.attach(leagueId, actorId, Uploads.Purpose.DISPUTE_EVIDENCE, evidence);
+			report.addEvidence(evidence);
+		}
+		return report;
 	}
 
 	/** A player's approved squad cards: squad card id → player name. */
@@ -288,7 +319,8 @@ class FixtureService {
 	}
 
 	record ReportView(UUID id, ScoreReport.Kind kind, UUID reportedBy, String reportedByName, int homeGoals,
-			int awayGoals, String note, OffsetDateTime createdAt, List<ScoreReport.Goal> goals, ScoreReport.Mvp mvp) {
+			int awayGoals, String note, OffsetDateTime createdAt, List<ScoreReport.Goal> goals, ScoreReport.Mvp mvp,
+			List<UUID> evidence) {
 	}
 
 	record FixtureDetail(FixtureSummary fixture, String seasonName, List<ReportView> reports, UUID finalReportId) {

@@ -8,6 +8,7 @@ import { SelectField, TextField } from '../components/ui/Field'
 import { ErrorState, ListSkeleton } from '../components/ui/States'
 import { Tile } from '../components/ui/Tile'
 import { useLeague } from '../features/league/useLeagues'
+import { ScreenshotPicker } from '../features/files/ScreenshotPicker'
 import { CardRow } from '../features/roster/CardRow'
 import {
   CARD_TYPES,
@@ -51,12 +52,23 @@ export function AddCardPage() {
     )
   }
 
-  return <AddCardForm slug={slug} leagueName={league.data.name} rules={rulesSummary(data.rules)} />
+  return (
+    <AddCardForm
+      slug={slug}
+      leagueName={league.data.name}
+      rules={rulesSummary(data.rules)}
+      requireProof={Boolean(data.rules.requireCardProof)}
+    />
+  )
 }
 
-function AddCardForm({ slug, leagueName, rules }: { slug: string; leagueName: string; rules: string }) {
+type AddCardFormProps = { slug: string; leagueName: string; rules: string; requireProof: boolean }
+
+function AddCardForm({ slug, leagueName, rules, requireProof }: AddCardFormProps) {
   const navigate = useNavigate()
   const addCard = useAddCard(slug)
+  const [proof, setProof] = useState<string | undefined>()
+  const missingProof = requireProof && !proof
   const [query, setQuery] = useState('')
   const search = useCardSearch(slug, query)
   const [cardType, setCardType] = useState<CardType>('STANDARD')
@@ -74,13 +86,13 @@ function AddCardForm({ slug, leagueName, rules }: { slug: string; leagueName: st
   }
 
   function pick(card: Card) {
-    addCard.mutate({ cardId: card.id }, { onSuccess: () => done(card) })
+    addCard.mutate({ cardId: card.id, proofUploadId: proof }, { onSuccess: () => done(card) })
   }
 
   function submit(event: FormEvent) {
     event.preventDefault()
     const card = { playerName: name, cardType, rating: ratingNumber, position }
-    addCard.mutate(card, { onSuccess: () => done(card) })
+    addCard.mutate({ ...card, proofUploadId: proof }, { onSuccess: () => done(card) })
   }
 
   const results = query.trim().length >= 2 ? (search.data ?? []) : []
@@ -106,6 +118,20 @@ function AddCardForm({ slug, leagueName, rules }: { slug: string; leagueName: st
             }}
           />
 
+          <ScreenshotPicker
+            slug={slug}
+            purpose="CARD_PROOF"
+            label={requireProof ? 'Screenshot of the card' : 'Screenshot of the card (optional)'}
+            hint={
+              requireProof
+                ? 'This league needs one: a screenshot from your club in the game, showing the card.'
+                : 'Helps the admins approve it: a screenshot from your club in the game, showing the card.'
+            }
+            max={1}
+            required={requireProof}
+            onChange={(ids) => setProof(ids[0])}
+          />
+
           {results.length > 0 && (
             <div className="flex flex-col gap-2" aria-live="polite">
               <p className="type-label px-1 text-tile-muted">Already in this league</p>
@@ -114,7 +140,7 @@ function AddCardForm({ slug, leagueName, rules }: { slug: string; leagueName: st
                   <li key={card.id}>
                     <button
                       type="button"
-                      disabled={addCard.isPending}
+                      disabled={addCard.isPending || missingProof}
                       onClick={() => pick(card)}
                       className="press w-full rounded-inner bg-tile-soft p-3 text-left disabled:opacity-50"
                     >
@@ -166,7 +192,7 @@ function AddCardForm({ slug, leagueName, rules }: { slug: string; leagueName: st
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <Button type="submit" size="lg" disabled={addCard.isPending || !nameValid || !ratingValid}>
+              <Button type="submit" size="lg" disabled={addCard.isPending || !nameValid || !ratingValid || missingProof}>
                 {addCard.isPending ? 'Adding…' : 'Add new card'}
               </Button>
               <Button size="lg" variant="secondary" onClick={() => navigate(-1)}>

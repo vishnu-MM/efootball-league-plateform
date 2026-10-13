@@ -17,6 +17,11 @@ spring:
   mvc:
     problemdetails:
       enabled: true
+  servlet:
+    multipart:
+      # Screenshots are capped at 5 MB (checked again in Uploads); a little room for the form fields.
+      max-file-size: 5MB
+      max-request-size: 6MB
   modulith:
     events:
       # Notifications and Discord posts run after commit; any that didn't finish are retried on startup.
@@ -47,6 +52,13 @@ app:
   version: 0.0.1
   # Where people open the app; used for links in Discord posts.
   public-url: ${APP_PUBLIC_URL:http://localhost:3000}
+  # Screenshot storage: any S3-compatible service. The defaults match the storage service in docker-compose.yml.
+  storage:
+    endpoint: ${STORAGE_ENDPOINT:http://localhost:8333}
+    region: ${STORAGE_REGION:us-east-1}
+    bucket: ${STORAGE_BUCKET:league-uploads}
+    access-key: ${STORAGE_ACCESS_KEY:league}
+    secret-key: ${STORAGE_SECRET_KEY:league-secret}
 
 ---
 # Local development: enables name-only "dev login" (never enable in production).

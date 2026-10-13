@@ -6,9 +6,10 @@ import { Button } from '../components/ui/Button'
 import { TextField } from '../components/ui/Field'
 import { EmptyState, ErrorState, ListSkeleton } from '../components/ui/States'
 import { Tile } from '../components/ui/Tile'
+import { Thumbnail } from '../features/files/Thumbnail'
 import { useLeague } from '../features/league/useLeagues'
 import { CardRow } from '../features/roster/CardRow'
-import { useApprovals, useDecideCard, type PendingCard } from '../features/roster/useRoster'
+import { proofSrc, useApprovals, useDecideCard, type PendingCard } from '../features/roster/useRoster'
 import { toneAt } from '../lib/tones'
 
 /** Owners and admins approve or reject the cards managers have added, grouped by squad. */
@@ -72,7 +73,14 @@ function PendingRow({ slug, pending }: { slug: string; pending: PendingCard }) {
 
   return (
     <li className="flex flex-col gap-3 py-3">
-      <CardRow card={pending.card} />
+      <div className="flex items-start gap-3">
+        <CardRow card={pending.card} className="min-w-0 flex-1" />
+        {pending.hasProof ? (
+          <Thumbnail src={proofSrc(slug, pending.id)} alt={`Screenshot of ${name}`} />
+        ) : (
+          <span className="shrink-0 self-center text-xs text-tile-muted">No screenshot</span>
+        )}
+      </div>
       {rejecting ? (
         <div className="flex flex-col gap-3">
           <TextField
