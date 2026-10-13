@@ -11,6 +11,7 @@ import { AddCardPage } from './pages/AddCardPage'
 import { ApprovalsPage } from './pages/ApprovalsPage'
 import { CreateLeaguePage } from './pages/CreateLeaguePage'
 import { CreateSeasonPage } from './pages/CreateSeasonPage'
+import { DiscordSettingsPage } from './pages/DiscordSettingsPage'
 import { DiscoverPage } from './pages/DiscoverPage'
 import { FixturePage } from './pages/FixturePage'
 import { HomePage } from './pages/HomePage'
@@ -57,6 +58,7 @@ const router = createBrowserRouter([
           { path: 'leagues/:slug/squad/add', element: <AddCardPage /> },
           { path: 'leagues/:slug/squad/approvals', element: <ApprovalsPage /> },
           { path: 'leagues/:slug/squad/rules', element: <SquadRulesPage /> },
+          { path: 'leagues/:slug/settings/discord', element: <DiscordSettingsPage /> },
           { path: 'account', element: <AccountPage /> },
           { path: 'notifications', element: <NotificationsPage /> },
         ],

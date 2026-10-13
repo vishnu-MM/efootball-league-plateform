@@ -45,6 +45,8 @@ management:
 
 app:
   version: 0.0.1
+  # Where people open the app; used for links in Discord posts.
+  public-url: ${APP_PUBLIC_URL:http://localhost:3000}
 
 ---
 # Local development: enables name-only "dev login" (never enable in production).

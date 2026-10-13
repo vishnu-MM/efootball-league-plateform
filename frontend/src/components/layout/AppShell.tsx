@@ -46,6 +46,7 @@ function useCurrentPageLabel() {
   if (/^\/leagues\/[^/]+\/squads\/[^/]+$/.test(pathname)) return 'Squad'
   if (/^\/leagues\/[^/]+\/log$/.test(pathname)) return 'League log'
   if (/^\/leagues\/[^/]+\/stats$/.test(pathname)) return 'Leaderboards'
+  if (/^\/leagues\/[^/]+\/settings\/discord$/.test(pathname)) return 'Discord'
   return '404'
 }
 

@@ -1,4 +1,4 @@
-import { Globe, Lock } from 'lucide-react'
+import { Globe, Lock, MessageSquare } from 'lucide-react'
 import { Link, useParams } from 'react-router'
 import { ApiError } from '../api/client'
 import { LogTile } from '../features/activity/LogTile'
@@ -66,10 +66,20 @@ export function LeaguePage() {
         </div>
         <div className="flex flex-col gap-6">
           <h1 className="type-poster break-words">{league.name}</h1>
-          <dl className="flex w-fit min-w-44 flex-col gap-2 rounded-inner bg-tile-soft p-5">
-            <dt className="type-heading">Members</dt>
-            <dd className="type-metric">{league.memberCount}</dd>
-          </dl>
+          <div className="flex flex-wrap items-end gap-3">
+            <dl className="flex w-fit min-w-44 flex-col gap-2 rounded-inner bg-tile-soft p-5">
+              <dt className="type-heading">Members</dt>
+              <dd className="type-metric">{league.memberCount}</dd>
+            </dl>
+            {league.myRole === 'OWNER' && (
+              <Button asChild variant="secondary">
+                <Link to={`/leagues/${league.slug}/settings/discord`}>
+                  <MessageSquare className="size-4" aria-hidden />
+                  Discord
+                </Link>
+              </Button>
+            )}
+          </div>
         </div>
       </Tile>
 
