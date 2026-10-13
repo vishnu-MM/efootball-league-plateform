@@ -17,6 +17,10 @@ spring:
   mvc:
     problemdetails:
       enabled: true
+  modulith:
+    events:
+      # Notifications and Discord posts run after commit; any that didn't finish are retried on startup.
+      republish-outstanding-events-on-restart: true
 
 server:
   port: ${PORT:8080}

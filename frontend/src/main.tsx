@@ -18,6 +18,7 @@ import { JoinPage } from './pages/JoinPage'
 import { LeaguePage } from './pages/LeaguePage'
 import { LogPage } from './pages/LogPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { NotificationsPage } from './pages/NotificationsPage'
 import { SignInPage } from './pages/SignInPage'
 import { SquadPage } from './pages/SquadPage'
 import { SquadRulesPage } from './pages/SquadRulesPage'
@@ -57,6 +58,7 @@ const router = createBrowserRouter([
           { path: 'leagues/:slug/squad/approvals', element: <ApprovalsPage /> },
           { path: 'leagues/:slug/squad/rules', element: <SquadRulesPage /> },
           { path: 'account', element: <AccountPage /> },
+          { path: 'notifications', element: <NotificationsPage /> },
         ],
       },
       { path: '*', element: <NotFoundPage /> },

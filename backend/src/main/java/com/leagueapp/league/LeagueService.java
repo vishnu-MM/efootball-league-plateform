@@ -1,6 +1,7 @@
 package com.leagueapp.league;
 
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +45,12 @@ public class LeagueService {
 		LeagueDetail detail = detail(slug, viewerId);
 		League league = detail.league();
 		return new LeagueAccess(league.getId(), league.getSlug(), league.getName(), detail.myRole());
+	}
+
+	/** Slug and name of these leagues, for links (no visibility check: callers only pass leagues the user is in). */
+	public Map<UUID, LeagueRef> refs(Collection<UUID> leagueIds) {
+		return leagues.findAllById(leagueIds).stream()
+			.collect(Collectors.toMap(League::getId, l -> new LeagueRef(l.getId(), l.getSlug(), l.getName())));
 	}
 
 	/** Every member with their name, club and role: owner first, then admins, then managers by join date. */
@@ -112,6 +119,9 @@ public class LeagueService {
 			return viewerRole != null && viewerRole.canManageLeague();
 		}
 
+	}
+
+	public record LeagueRef(UUID id, String slug, String name) {
 	}
 
 	public record MemberInfo(UUID userId, String displayName, String clubName, LeagueRole role,
