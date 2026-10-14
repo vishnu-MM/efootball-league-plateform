@@ -10,6 +10,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import com.leagueapp.identity.IdentityService;
+import com.leagueapp.league.LeagueEvents;
 import com.leagueapp.league.LeagueService;
 import com.leagueapp.league.LeagueService.MemberInfo;
 import com.leagueapp.match.MatchEvents;
@@ -116,6 +117,13 @@ class ActivityRecorder {
 		Names n = names(e.leagueId(), e.actorId());
 		record(e.leagueId(), e.actorId(), e.open() ? LeagueActivity.Type.WINDOW_OPENED : LeagueActivity.Type.WINDOW_CLOSED,
 				n.person(e.actorId()) + (e.open() ? " opened" : " closed") + " the transfer window", null, null, null);
+	}
+
+	@EventListener
+	void on(LeagueEvents.OwnershipTransferred e) {
+		Names n = names(e.leagueId(), e.actorId(), e.newOwnerId());
+		record(e.leagueId(), e.actorId(), LeagueActivity.Type.OWNERSHIP_TRANSFERRED,
+				n.person(e.actorId()) + " handed the league to " + n.person(e.newOwnerId()), null, null, e.newOwnerId());
 	}
 
 	private void record(UUID leagueId, UUID actorId, LeagueActivity.Type type, String summary, String reason,

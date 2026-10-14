@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -49,6 +50,11 @@ class LeagueController {
 		return LeagueSummary.from(leagueService.create(currentUser.requireId(), body.name(), body.visibility()));
 	}
 
+	@PutMapping("/api/leagues/{slug}")
+	LeagueSummary update(@PathVariable String slug, @Valid @RequestBody UpdateLeagueRequest body) {
+		return LeagueSummary.from(leagueService.update(slug, currentUser.requireId(), body.name(), body.visibility()));
+	}
+
 	@GetMapping("/api/leagues/mine")
 	List<MyLeagueResponse> mine() {
 		return leagueService.leaguesOf(currentUser.requireId()).stream()
@@ -58,6 +64,9 @@ class LeagueController {
 
 	record CreateLeagueRequest(@NotBlank @Size(min = 3, max = 80) String name,
 			@NotNull League.Visibility visibility) {
+	}
+
+	record UpdateLeagueRequest(@NotBlank @Size(max = 80) String name, @NotNull League.Visibility visibility) {
 	}
 
 	record LeagueSummary(UUID id, String name, String slug) {

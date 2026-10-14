@@ -15,6 +15,7 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.leagueapp.identity.IdentityService;
+import com.leagueapp.league.LeagueEvents;
 import com.leagueapp.league.LeagueService;
 import com.leagueapp.league.LeagueService.LeagueRef;
 import com.leagueapp.league.LeagueService.MemberInfo;
@@ -144,6 +145,13 @@ class Notifier {
 				"The transfer window is " + (e.open() ? "open. Squads can change." : "closed. Squads are fixed."), l.home());
 	}
 
+	@ApplicationModuleListener
+	void on(LeagueEvents.OwnershipTransferred e) {
+		League l = league(e.leagueId());
+		l.send(e.actorId(), "OWNERSHIP_TRANSFERRED", List.of(e.newOwnerId()), "You're now the owner of " + l.name() + ".",
+				l.home());
+	}
+
 	private League league(UUID leagueId) {
 		LeagueRef ref = leagueService.refs(List.of(leagueId)).get(leagueId);
 		List<MemberInfo> members = leagueService.memberInfos(leagueId);
@@ -228,6 +236,10 @@ class Notifier {
 
 		String home() {
 			return path("");
+		}
+
+		String name() {
+			return ref == null ? "a league" : ref.name();
 		}
 
 		String fixture(MatchEvents.Match m) {

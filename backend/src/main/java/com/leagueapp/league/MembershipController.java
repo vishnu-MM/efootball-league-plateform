@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -52,10 +53,25 @@ class MembershipController {
 		membershipService.remove(slug, currentUser.requireId(), userId);
 	}
 
+	@PostMapping("/api/leagues/{slug}/leave")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	void leave(@PathVariable String slug) {
+		membershipService.leave(slug, currentUser.requireId());
+	}
+
+	@PostMapping("/api/leagues/{slug}/transfer-ownership")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	void transferOwnership(@PathVariable String slug, @Valid @RequestBody TransferRequest body) {
+		membershipService.transferOwnership(slug, currentUser.requireId(), body.userId());
+	}
+
 	/** Sets the signed-in member's own club name in this league. */
 	@PutMapping("/api/leagues/{slug}/club")
 	ClubResponse setClub(@PathVariable String slug, @Valid @RequestBody ClubRequest body) {
 		return new ClubResponse(membershipService.setClubName(slug, currentUser.requireId(), body.name()));
+	}
+
+	record TransferRequest(@NotNull UUID userId) {
 	}
 
 	record RoleRequest(@NotNull LeagueRole role) {

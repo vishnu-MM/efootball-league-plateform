@@ -74,6 +74,19 @@ public class LeagueService {
 		return league;
 	}
 
+	/** Owner only. The slug stays the same, so existing links keep working. */
+	@Transactional
+	League update(String slug, UUID actorId, String name, League.Visibility visibility) {
+		LeagueDetail detail = detail(slug, actorId);
+		if (detail.myRole() != LeagueRole.OWNER) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the owner can change league settings");
+		}
+		League league = detail.league();
+		league.rename(name.strip());
+		league.changeVisibility(visibility);
+		return league;
+	}
+
 	List<MyLeague> leaguesOf(UUID userId) {
 		Map<UUID, LeagueRole> roles = memberships.findByKeyUserId(userId).stream()
 			.collect(Collectors.toMap(LeagueMembership::getLeagueId, LeagueMembership::getRole));

@@ -68,6 +68,18 @@ public class League {
 		return createdAt;
 	}
 
+	void rename(String name) {
+		this.name = name;
+	}
+
+	void changeVisibility(Visibility visibility) {
+		this.visibility = visibility;
+	}
+
+	void transferTo(UUID newOwnerId) {
+		this.ownerId = newOwnerId;
+	}
+
 	public enum Visibility {
 		PUBLIC, PRIVATE
 	}

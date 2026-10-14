@@ -104,7 +104,8 @@ class LeagueActivity {
 
 		DISPUTE_RESOLVED(true), RESULT_OVERRIDDEN(true), FORFEIT(true), POINTS_DEDUCTED(true),
 		DEDUCTION_REVOKED(true), CARD_APPROVED(true), CARD_REJECTED(true), SQUAD_RULES_CHANGED(true),
-		WINDOW_OPENED(true), WINDOW_CLOSED(true), SEASON_STARTED(true), SEASON_COMPLETED(false);
+		WINDOW_OPENED(true), WINDOW_CLOSED(true), SEASON_STARTED(true), SEASON_COMPLETED(false),
+		OWNERSHIP_TRANSFERRED(true);
 
 		/** Done by an owner or admin, as opposed to something that happened on its own. */
 		final boolean adminAction;
