@@ -108,10 +108,19 @@ class SeasonService {
 		}
 	}
 
-	/** The active season, or the latest finished one, with every fixture and what the viewer may do with each. */
-	Optional<SeasonView> current(String slug, UUID viewerId) {
+	/**
+	 * A season (null: the active one, or the latest finished one) with every fixture and what the viewer may do
+	 * with each. Past seasons are read-only: their actions follow from the season being complete.
+	 */
+	Optional<SeasonView> current(String slug, UUID viewerId, UUID seasonId) {
 		LeagueAccess league = leagueService.access(slug, viewerId);
-		return seasons.findFirstByLeagueIdOrderByNumberDesc(league.leagueId()).map(season -> view(season, league, viewerId));
+		return seasons.pick(league.leagueId(), seasonId).map(season -> view(season, league, viewerId));
+	}
+
+	/** Every season of the league, newest first. */
+	List<Season> all(String slug, UUID viewerId) {
+		LeagueAccess league = leagueService.access(slug, viewerId);
+		return seasons.findByLeagueIdOrderByNumberDesc(league.leagueId());
 	}
 
 	private SeasonView view(Season season, LeagueAccess league, UUID viewerId) {

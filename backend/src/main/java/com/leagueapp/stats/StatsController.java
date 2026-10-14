@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.leagueapp.identity.CurrentUser;
@@ -34,11 +35,11 @@ class StatsController {
 		this.currentUser = currentUser;
 	}
 
-	/** Top scorers, assists and MVPs of the active (or latest) season, from final results, on every read. */
+	/** Top scorers, assists and MVPs of a season (by default the active or latest one), from final results. */
 	@GetMapping("/api/public/leagues/{slug}/stats")
-	StatsResponse stats(@PathVariable String slug) {
+	StatsResponse stats(@PathVariable String slug, @RequestParam(required = false) UUID season) {
 		LeagueService.LeagueAccess league = leagueService.access(slug, currentUser.id().orElse(null));
-		return matchResults.latestSeasonCredits(league.leagueId()).map(s -> {
+		return matchResults.seasonCredits(league.leagueId(), season).map(s -> {
 			List<UUID> cardIds = s.credits().stream().map(Credit::squadCardId).filter(Objects::nonNull).distinct().toList();
 			Map<UUID, Squads.SquadPlayer> cards = squads.cardsById(cardIds);
 			return new StatsResponse(new SeasonRef(s.seasonId(), s.name(), s.active()),

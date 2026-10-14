@@ -2,6 +2,7 @@ package com.leagueapp.match;
 
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -45,10 +47,18 @@ class MatchController {
 
 	/** The active season (or the latest finished one); {@code season} is null if the league hasn't had one. */
 	@GetMapping("/api/public/leagues/{slug}/season")
-	CurrentSeasonResponse currentSeason(@PathVariable String slug) {
-		return new CurrentSeasonResponse(seasonService.current(slug, currentUser.id().orElse(null))
+	CurrentSeasonResponse currentSeason(@PathVariable String slug, @RequestParam(required = false) UUID season) {
+		return new CurrentSeasonResponse(seasonService.current(slug, currentUser.id().orElse(null), season)
 			.map(SeasonResponse::from)
 			.orElse(null));
+	}
+
+	/** Every season of the league, newest first, for the season picker. */
+	@GetMapping("/api/public/leagues/{slug}/seasons")
+	List<SeasonListItem> seasons(@PathVariable String slug) {
+		return seasonService.all(slug, currentUser.id().orElse(null)).stream()
+			.map(s -> new SeasonListItem(s.getId(), s.getName(), s.getStatus(), s.getCreatedAt(), s.getCompletedAt()))
+			.toList();
 	}
 
 	@PostMapping("/api/leagues/{slug}/seasons")
@@ -170,6 +180,10 @@ class MatchController {
 	}
 
 	record CurrentSeasonResponse(SeasonResponse season) {
+	}
+
+	record SeasonListItem(UUID id, String name, Season.Status status, OffsetDateTime startedAt,
+			OffsetDateTime completedAt) {
 	}
 
 	record SeasonResponse(UUID id, int number, String name, Season.Format format, Season.Status status, int pointsWin,

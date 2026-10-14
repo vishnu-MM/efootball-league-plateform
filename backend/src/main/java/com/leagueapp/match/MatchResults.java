@@ -36,11 +36,11 @@ public class MatchResults {
 	}
 
 	/**
-	 * Goals, assists and MVPs from the final results of the active (or latest) season: one credit per goal, assist
-	 * or MVP award, with the manager whose side it was for.
+	 * Goals, assists and MVPs from the final results of a season (null: the active or latest one): one credit per
+	 * goal, assist or MVP award, with the manager whose side it was for. A season of another league is a 404.
 	 */
-	public Optional<SeasonCredits> latestSeasonCredits(UUID leagueId) {
-		return seasons.findFirstByLeagueIdOrderByNumberDesc(leagueId).map(season -> {
+	public Optional<SeasonCredits> seasonCredits(UUID leagueId, UUID seasonId) {
+		return seasons.pick(leagueId, seasonId).map(season -> {
 			Map<UUID, Fixture> byReport = new HashMap<>();
 			for (Fixture f : fixtures.findBySeasonIdOrderByRoundAscIdAsc(season.getId())) {
 				if (f.getStatus() == Fixture.Status.CONFIRMED && f.getFinalReportId() != null) {
@@ -70,9 +70,12 @@ public class MatchResults {
 		});
 	}
 
-	/** The active season, or the latest finished one; empty if the league has never had a season. */
-	public Optional<SeasonResults> latestSeason(UUID leagueId) {
-		return seasons.findFirstByLeagueIdOrderByNumberDesc(leagueId).map(season -> {
+	/**
+	 * A season's players, final results and deductions (null: the active season, or the latest finished one);
+	 * empty if the league has never had a season. A season of another league is a 404.
+	 */
+	public Optional<SeasonResults> season(UUID leagueId, UUID seasonId) {
+		return seasons.pick(leagueId, seasonId).map(season -> {
 			List<UUID> players = participants.findByKeySeasonId(season.getId()).stream()
 				.map(SeasonParticipant::getUserId)
 				.toList();
