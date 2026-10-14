@@ -3,7 +3,7 @@ import { cn } from '../../lib/cn'
 import { cardLine, type CardType, type Position } from './useRoster'
 
 type CardRowProps = {
-  card: { playerName: string; cardType: CardType; rating: number; position: Position }
+  card: { playerName: string; cardType: CardType; rating: number | null; position: Position }
   /** Status chip, buttons, etc. on the right. */
   children?: ReactNode
   className?: string
@@ -14,7 +14,7 @@ export function CardRow({ card, children, className }: CardRowProps) {
   return (
     <div className={cn('flex items-center gap-3', className)}>
       <span className="grid size-12 shrink-0 place-items-center rounded-tile bg-paper font-metric text-lg font-semibold text-ink tabular-nums">
-        {card.rating}
+        {card.rating ?? '—'}
       </span>
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="truncate text-sm">{card.playerName}</span>

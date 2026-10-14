@@ -30,7 +30,7 @@ export const CAP_TYPES: Record<CapType, { title: string; body: string; usage: st
 export const RATING_MIN = 40
 export const RATING_MAX = 110
 
-export type Card = { id: string; playerName: string; cardType: CardType; rating: number; position: Position }
+export type Card = { id: string; playerName: string; cardType: CardType; rating: number | null; position: Position }
 
 export type SquadCard = { id: string; status: SquadCardStatus; rejectReason: string | null; card: Card; hasProof: boolean }
 
@@ -63,7 +63,7 @@ export type SquadPlayer = {
   squadCardId: string
   playerName: string
   cardType: CardType
-  rating: number
+  rating: number | null
   position: Position
 }
 
@@ -71,7 +71,7 @@ export type MemberSquad = { userId: string; name: string; cards: SquadPlayer[] }
 
 export type NewCard = (
   | { cardId: string }
-  | { playerName: string; cardType: CardType; rating: number; position: Position }
+  | { playerName: string; cardType: CardType; rating?: number | null; position: Position }
 ) & { proofUploadId?: string }
 
 /** Where a card's proof screenshot can be loaded (for its manager and owners/admins). */

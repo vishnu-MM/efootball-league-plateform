@@ -34,8 +34,8 @@ class Card {
 	@Column(name = "card_type", nullable = false, length = 20)
 	private CardType cardType;
 
-	@Column(nullable = false)
-	private short rating;
+	@Column
+	private Short rating;
 
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 4)
@@ -54,12 +54,12 @@ class Card {
 	protected Card() {
 	}
 
-	Card(UUID leagueId, String playerName, CardType cardType, int rating, Position position, UUID createdBy) {
+	Card(UUID leagueId, String playerName, CardType cardType, Integer rating, Position position, UUID createdBy) {
 		this.id = UUID.randomUUID();
 		this.leagueId = leagueId;
 		this.playerName = playerName;
 		this.cardType = cardType;
-		this.rating = (short) rating;
+		this.rating = rating == null ? null : rating.shortValue();
 		this.position = position;
 		this.createdBy = createdBy;
 	}
@@ -80,8 +80,8 @@ class Card {
 		return cardType;
 	}
 
-	int getRating() {
-		return rating;
+	Integer getRating() {
+		return rating == null ? null : (int) rating;
 	}
 
 	Position getPosition() {
@@ -89,7 +89,7 @@ class Card {
 	}
 
 	SquadRuleChecker.Entry entry() {
-		return new SquadRuleChecker.Entry(playerName, cardType, rating);
+		return new SquadRuleChecker.Entry(playerName, cardType, getRating());
 	}
 
 }

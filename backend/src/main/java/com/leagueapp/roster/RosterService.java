@@ -202,14 +202,15 @@ class RosterService {
 		if (name.length() < 2 || name.length() > Card.NAME_MAX) {
 			throw badRequest("Use 2 to " + Card.NAME_MAX + " characters for the player's name");
 		}
-		if (request.cardType() == null || request.position() == null || request.rating() == null) {
-			throw badRequest("Pick the card type, position and rating");
+		if (request.cardType() == null || request.position() == null) {
+			throw badRequest("Pick the card type and position");
 		}
-		if (request.rating() < Card.RATING_MIN || request.rating() > Card.RATING_MAX) {
+		if (request.rating() != null && (request.rating() < Card.RATING_MIN || request.rating() > Card.RATING_MAX)) {
 			throw badRequest("Ratings go from " + Card.RATING_MIN + " to " + Card.RATING_MAX);
 		}
+		Short ratingShort = request.rating() == null ? null : request.rating().shortValue();
 		// The league's rules row is locked, so nobody else can insert the same card in between.
-		return cards.findSame(leagueId, name, request.cardType(), request.rating().shortValue(), request.position())
+		return cards.findSame(leagueId, name, request.cardType(), ratingShort, request.position())
 			.orElseGet(() -> cards.save(new Card(leagueId, name, request.cardType(), request.rating(), request.position(),
 					viewerId)));
 	}

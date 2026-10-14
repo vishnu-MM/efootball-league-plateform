@@ -6,6 +6,7 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -37,7 +38,7 @@ final class SquadRuleChecker {
 		if (usage != null && rules.capValue() != null && usage > rules.capValue()) {
 			switch (rules.capType()) {
 				case PER_CARD -> squad.stream()
-					.filter(card -> card.rating() > rules.capValue())
+					.filter(card -> card.rating() != null && card.rating() > rules.capValue())
 					.forEach(card -> problems.add(card.name() + " is rated " + card.rating()
 							+ "; the limit per card is " + rules.capValue()));
 				case SQUAD_TOTAL -> problems.add("Squad total is " + format(usage) + "; the cap is " + format(rules.capValue()));
@@ -53,10 +54,11 @@ final class SquadRuleChecker {
 	static Integer capUsage(Rules rules, List<Entry> squad) {
 		return switch (rules.capType()) {
 			case NONE -> null;
-			case PER_CARD -> squad.stream().mapToInt(Entry::rating).max().orElse(0);
-			case SQUAD_TOTAL -> squad.stream().mapToInt(Entry::rating).sum();
+			case PER_CARD -> squad.stream().map(Entry::rating).filter(Objects::nonNull).mapToInt(Integer::intValue).max().orElse(0);
+			case SQUAD_TOTAL -> squad.stream().map(Entry::rating).filter(Objects::nonNull).mapToInt(Integer::intValue).sum();
 			case TOP_11_TOTAL -> squad.stream()
 				.map(Entry::rating)
+				.filter(Objects::nonNull)
 				.sorted(Comparator.reverseOrder())
 				.limit(TOP_N)
 				.mapToInt(Integer::intValue)
@@ -73,7 +75,7 @@ final class SquadRuleChecker {
 	}
 
 	/** A live card in a squad (pending or approved). */
-	record Entry(String name, CardType type, int rating) {
+	record Entry(String name, CardType type, Integer rating) {
 	}
 
 }

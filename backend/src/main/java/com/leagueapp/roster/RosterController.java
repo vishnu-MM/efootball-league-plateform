@@ -150,7 +150,7 @@ class RosterController {
 
 	}
 
-	record CardResponse(UUID id, String playerName, CardType cardType, int rating, Position position) {
+	record CardResponse(UUID id, String playerName, CardType cardType, Integer rating, Position position) {
 
 		static CardResponse from(Card card) {
 			return new CardResponse(card.getId(), card.getPlayerName(), card.getCardType(), card.getRating(),

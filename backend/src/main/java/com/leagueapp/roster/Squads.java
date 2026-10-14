@@ -2,6 +2,7 @@ package com.leagueapp.roster;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -36,7 +37,7 @@ public class Squads {
 				List.of(SquadCard.Status.APPROVED))
 			.stream()
 			.map(SquadPlayer::of)
-			.sorted((a, b) -> Integer.compare(b.rating(), a.rating()))
+			.sorted(Comparator.comparing(SquadPlayer::rating, Comparator.nullsLast(Comparator.reverseOrder())))
 			.toList();
 	}
 
@@ -104,7 +105,7 @@ public class Squads {
 	}
 
 	/** An approved card as other modules see it. */
-	public record SquadPlayer(UUID squadCardId, String playerName, CardType cardType, int rating, Position position) {
+	public record SquadPlayer(UUID squadCardId, String playerName, CardType cardType, Integer rating, Position position) {
 
 		static SquadPlayer of(SquadCard squadCard) {
 			Card card = squadCard.getCard();
