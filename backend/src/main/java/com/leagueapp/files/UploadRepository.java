@@ -22,4 +22,6 @@ interface UploadRepository extends JpaRepository<Upload, UUID> {
 
 	List<Upload> findByAttachedAtIsNullAndCreatedAtBefore(OffsetDateTime before, Limit limit);
 
+	List<Upload> findByLeagueId(UUID leagueId);
+
 }

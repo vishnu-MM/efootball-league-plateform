@@ -90,6 +90,7 @@ class InviteService {
 		return invites.findById(code)
 			.filter(LeagueInvite::isActive)
 			.flatMap(invite -> leagues.findById(invite.getLeagueId()))
+			.filter(league -> !league.isRestricted())
 			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "This invite link isn't valid"));
 	}
 

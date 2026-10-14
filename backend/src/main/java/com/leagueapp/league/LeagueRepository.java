@@ -1,5 +1,6 @@
 package com.leagueapp.league;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -14,7 +15,9 @@ import org.springframework.data.repository.query.Param;
 
 interface LeagueRepository extends JpaRepository<League, UUID> {
 
-	List<League> findByVisibilityOrderByCreatedAtDesc(League.Visibility visibility);
+	List<League> findByVisibilityAndDeletedAtIsNullAndHiddenAtIsNullOrderByCreatedAtDesc(League.Visibility visibility);
+
+	List<League> findByDeletedAtBefore(OffsetDateTime before);
 
 	Optional<League> findBySlug(String slug);
 

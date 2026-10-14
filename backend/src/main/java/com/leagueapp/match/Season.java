@@ -98,6 +98,14 @@ class Season {
 		return number;
 	}
 
+	OffsetDateTime getCreatedAt() {
+		return createdAt;
+	}
+
+	OffsetDateTime getCompletedAt() {
+		return completedAt;
+	}
+
 	String getName() {
 		return name;
 	}

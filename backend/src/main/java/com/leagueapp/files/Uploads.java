@@ -13,12 +13,17 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Limit;
+import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.server.ResponseStatusException;
+
+import com.leagueapp.league.LeagueEvents;
 
 import software.amazon.awssdk.core.exception.SdkException;
 
@@ -103,6 +108,21 @@ public class Uploads {
 			log.warn("Couldn't read upload {}: {}", uploadId, e.getMessage());
 			throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Screenshots can't be loaded right now");
 		}
+	}
+
+	/**
+	 * A league is being purged: its upload rows go with it (cascade), and once that has committed its files are
+	 * removed from storage. A file that can't be removed is only logged.
+	 */
+	@EventListener
+	void on(LeagueEvents.LeaguePurging e) {
+		List<String> keys = uploads.findByLeagueId(e.leagueId()).stream().map(Upload::getStorageKey).toList();
+		TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+			@Override
+			public void afterCommit() {
+				keys.forEach(store::delete);
+			}
+		});
 	}
 
 	/** Hourly: removes uploads that were never attached (abandoned forms) from storage and the database. */

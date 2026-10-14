@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.leagueapp.identity.CurrentUser;
@@ -27,11 +28,11 @@ class StandingsController {
 		this.currentUser = currentUser;
 	}
 
-	/** The table for the active (or latest) season, recalculated from final results on every read. */
+	/** The table for a season (by default the active or latest one), recalculated from final results on every read. */
 	@GetMapping("/api/public/leagues/{slug}/standings")
-	StandingsResponse standings(@PathVariable String slug) {
+	StandingsResponse standings(@PathVariable String slug, @RequestParam(required = false) UUID season) {
 		LeagueService.LeagueAccess league = leagueService.access(slug, currentUser.id().orElse(null));
-		return matchResults.latestSeason(league.leagueId()).map(s -> {
+		return matchResults.season(league.leagueId(), season).map(s -> {
 			Map<UUID, Integer> deducted = s.deductions().stream()
 				.collect(Collectors.groupingBy(MatchResults.Deduction::userId,
 						Collectors.summingInt(MatchResults.Deduction::points)));

@@ -1,5 +1,6 @@
 package com.leagueapp.league;
 
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.Comparator;
@@ -8,6 +9,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,21 +25,41 @@ import com.leagueapp.identity.IdentityService;
 @Transactional(readOnly = true)
 public class LeagueService {
 
+	/** How long the owner can restore a deleted league before it is purged. */
+	static final Duration RESTORE_WINDOW = Duration.ofDays(7);
+
 	private final LeagueRepository leagues;
 	private final LeagueMembershipRepository memberships;
 	private final ClubRepository clubs;
 	private final IdentityService identity;
+	private final ApplicationEventPublisher events;
 
 	LeagueService(LeagueRepository leagues, LeagueMembershipRepository memberships, ClubRepository clubs,
-			IdentityService identity) {
+			IdentityService identity, ApplicationEventPublisher events) {
 		this.leagues = leagues;
 		this.memberships = memberships;
 		this.clubs = clubs;
 		this.identity = identity;
+		this.events = events;
 	}
 
 	public List<League> publicLeagues() {
-		return leagues.findByVisibilityOrderByCreatedAtDesc(League.Visibility.PUBLIC);
+		return leagues.findByVisibilityAndDeletedAtIsNullAndHiddenAtIsNullOrderByCreatedAtDesc(League.Visibility.PUBLIC);
+	}
+
+	/** Hidden by moderators: nothing is announced about it (notifications, Discord). */
+	public boolean isHidden(UUID leagueId) {
+		return leagues.findById(leagueId).map(League::isHidden).orElse(false);
+	}
+
+	@Transactional
+	public void hide(UUID leagueId) {
+		leagues.findById(leagueId).orElseThrow(LeagueService::notFound).hide();
+	}
+
+	@Transactional
+	public void unhide(UUID leagueId) {
+		leagues.findById(leagueId).orElseThrow(LeagueService::notFound).unhide();
 	}
 
 	/** The league as this viewer may see it (404 for a private league they aren't in), with their role. */
@@ -74,6 +96,53 @@ public class LeagueService {
 		return league;
 	}
 
+	/** Owner only. The slug stays the same, so existing links keep working. */
+	@Transactional
+	League update(String slug, UUID actorId, String name, League.Visibility visibility) {
+		LeagueDetail detail = detail(slug, actorId);
+		if (detail.myRole() != LeagueRole.OWNER) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the owner can change league settings");
+		}
+		League league = detail.league();
+		league.rename(name.strip());
+		league.changeVisibility(visibility);
+		return league;
+	}
+
+	/** Owner only, confirmed by typing the name. Members are told; the owner can restore it for 7 days. */
+	@Transactional
+	void delete(String slug, UUID actorId, String confirmName) {
+		League league = requireOwner(slug, actorId);
+		if (league.getDeletedAt() != null) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "This league is already deleted");
+		}
+		if (!league.getName().equals(confirmName)) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Type the league name to confirm");
+		}
+		league.markDeleted();
+		events.publishEvent(new LeagueEvents.LeagueDeleted(league.getId(), actorId));
+	}
+
+	@Transactional
+	void restore(String slug, UUID actorId) {
+		League league = requireOwner(slug, actorId);
+		if (league.getDeletedAt() == null) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "This league isn't deleted");
+		}
+		if (OffsetDateTime.now().isAfter(league.getRestoreUntil())) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "This league can no longer be restored");
+		}
+		league.restore();
+	}
+
+	private League requireOwner(String slug, UUID actorId) {
+		LeagueDetail detail = detail(slug, actorId);
+		if (detail.myRole() != LeagueRole.OWNER) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the owner can do that");
+		}
+		return detail.league();
+	}
+
 	List<MyLeague> leaguesOf(UUID userId) {
 		Map<UUID, LeagueRole> roles = memberships.findByKeyUserId(userId).stream()
 			.collect(Collectors.toMap(LeagueMembership::getLeagueId, LeagueMembership::getRole));
@@ -83,7 +152,10 @@ public class LeagueService {
 			.toList();
 	}
 
-	/** A league is visible if it is public or the viewer is a member; otherwise it looks like it doesn't exist. */
+	/**
+	 * A league is visible if it is public or the viewer is a member; otherwise it looks like it doesn't exist.
+	 * A deleted or hidden league is visible only to its owner.
+	 */
 	LeagueDetail detail(String slug, UUID viewerId) {
 		League league = leagues.findBySlug(slug).orElseThrow(LeagueService::notFound);
 		LeagueRole role = viewerId == null ? null
@@ -91,6 +163,9 @@ public class LeagueService {
 					.map(LeagueMembership::getRole)
 					.orElse(null);
 		if (league.getVisibility() == League.Visibility.PRIVATE && role == null) {
+			throw notFound();
+		}
+		if (league.isRestricted() && role != LeagueRole.OWNER) {
 			throw notFound();
 		}
 		return new LeagueDetail(league, role, memberships.countByKeyLeagueId(league.getId()));

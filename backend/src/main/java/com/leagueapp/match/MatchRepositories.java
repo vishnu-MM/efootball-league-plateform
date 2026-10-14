@@ -11,6 +11,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 interface SeasonRepository extends JpaRepository<Season, UUID> {
 
@@ -18,6 +20,21 @@ interface SeasonRepository extends JpaRepository<Season, UUID> {
 
 	/** The active season, or else the most recent one. */
 	Optional<Season> findFirstByLeagueIdOrderByNumberDesc(UUID leagueId);
+
+	List<Season> findByLeagueIdOrderByNumberDesc(UUID leagueId);
+
+	/**
+	 * The season asked for (it must belong to this league, else 404), or with no id the active season or else
+	 * the most recent one.
+	 */
+	default Optional<Season> pick(UUID leagueId, UUID seasonId) {
+		if (seasonId == null) {
+			return findFirstByLeagueIdOrderByNumberDesc(leagueId);
+		}
+		return Optional.of(findById(seasonId)
+			.filter(s -> s.getLeagueId().equals(leagueId))
+			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Season not found")));
+	}
 
 	@Query("select coalesce(max(s.number), 0) from Season s where s.leagueId = :leagueId")
 	int maxNumber(@Param("leagueId") UUID leagueId);

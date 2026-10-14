@@ -33,6 +33,12 @@ public class League {
 	@Column(name = "created_at", nullable = false, insertable = false, updatable = false)
 	private OffsetDateTime createdAt;
 
+	@Column(name = "deleted_at")
+	private OffsetDateTime deletedAt;
+
+	@Column(name = "hidden_at")
+	private OffsetDateTime hiddenAt;
+
 	protected League() {
 	}
 
@@ -66,6 +72,52 @@ public class League {
 
 	public OffsetDateTime getCreatedAt() {
 		return createdAt;
+	}
+
+	public OffsetDateTime getDeletedAt() {
+		return deletedAt;
+	}
+
+	/** When the owner can no longer restore it; null if it isn't deleted. */
+	public OffsetDateTime getRestoreUntil() {
+		return deletedAt == null ? null : deletedAt.plus(LeagueService.RESTORE_WINDOW);
+	}
+
+	public boolean isHidden() {
+		return hiddenAt != null;
+	}
+
+	/** Deleted or hidden: only the owner (and site admins) can open it. */
+	boolean isRestricted() {
+		return deletedAt != null || hiddenAt != null;
+	}
+
+	void markDeleted() {
+		this.deletedAt = OffsetDateTime.now();
+	}
+
+	void restore() {
+		this.deletedAt = null;
+	}
+
+	void hide() {
+		this.hiddenAt = OffsetDateTime.now();
+	}
+
+	void unhide() {
+		this.hiddenAt = null;
+	}
+
+	void rename(String name) {
+		this.name = name;
+	}
+
+	void changeVisibility(Visibility visibility) {
+		this.visibility = visibility;
+	}
+
+	void transferTo(UUID newOwnerId) {
+		this.ownerId = newOwnerId;
 	}
 
 	public enum Visibility {
