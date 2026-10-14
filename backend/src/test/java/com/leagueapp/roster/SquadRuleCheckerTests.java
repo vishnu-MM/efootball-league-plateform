@@ -78,6 +78,20 @@ class SquadRuleCheckerTests {
 		assertThat(SquadRuleChecker.problems(rules, squad)).hasSize(3);
 	}
 
+	@Test
+	void unratedCardsAreToleratedInCapCalculations() {
+		Rules perCard = new Rules(null, CapType.PER_CARD, 90, Set.of());
+		List<Entry> squadWithUnrated = List.of(new Entry("A", CardType.STANDARD, null), new Entry("B", CardType.STANDARD, 85));
+		assertThat(SquadRuleChecker.problems(perCard, squadWithUnrated)).isEmpty();
+		assertThat(SquadRuleChecker.capUsage(perCard, squadWithUnrated)).isEqualTo(85);
+
+		Rules total = new Rules(null, CapType.SQUAD_TOTAL, 200, Set.of());
+		assertThat(SquadRuleChecker.capUsage(total, squadWithUnrated)).isEqualTo(85);
+
+		Rules top11 = new Rules(null, CapType.TOP_11_TOTAL, 1000, Set.of());
+		assertThat(SquadRuleChecker.capUsage(top11, squadWithUnrated)).isEqualTo(85);
+	}
+
 	private static List<Entry> cards(int count, int rating) {
 		List<Entry> squad = new ArrayList<>();
 		for (int i = 0; i < count; i++) {

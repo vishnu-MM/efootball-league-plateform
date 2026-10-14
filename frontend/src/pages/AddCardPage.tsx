@@ -76,8 +76,11 @@ function AddCardForm({ slug, leagueName, rules, requireProof }: AddCardFormProps
   const [rating, setRating] = useState('')
 
   const name = query.trim().replace(/\s+/g, ' ')
-  const ratingNumber = Number.parseInt(rating, 10)
-  const ratingValid = ratingNumber >= RATING_MIN && ratingNumber <= RATING_MAX
+  const trimmedRating = rating.trim()
+  const ratingNumber = trimmedRating === '' ? undefined : Number.parseInt(trimmedRating, 10)
+  const ratingValid =
+    trimmedRating === '' ||
+    (!Number.isNaN(ratingNumber!) && ratingNumber! >= RATING_MIN && ratingNumber! <= RATING_MAX)
   const nameValid = name.length >= 2 && name.length <= 60
 
   function done(card: { playerName: string }) {
@@ -180,13 +183,13 @@ function AddCardForm({ slug, leagueName, rules, requireProof }: AddCardFormProps
                 ))}
               </SelectField>
               <TextField
-                label="Rating"
+                label="Rating (optional)"
                 type="number"
                 inputMode="numeric"
                 min={RATING_MIN}
                 max={RATING_MAX}
                 value={rating}
-                error={rating && !ratingValid ? `${RATING_MIN}–${RATING_MAX}` : undefined}
+                error={trimmedRating && !ratingValid ? `${RATING_MIN}–${RATING_MAX}` : undefined}
                 onChange={(e) => setRating(e.target.value)}
               />
             </div>

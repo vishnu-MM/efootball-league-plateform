@@ -204,15 +204,36 @@ class RosterApiTests {
 		api.get(base(slug) + "/roster", ann).andExpect(jsonPath("$.windowOpen").value(true));
 	}
 
+	@Test
+	void addingCardWithoutRatingIsAllowed() throws Exception {
+		User owner = api.login("Optional Owner");
+		User ann = api.login("Optional Ann");
+		String slug = api.createLeague(owner, "Optional Rating Cup", "PUBLIC");
+		api.join(owner, slug, ann);
+
+		String cardId = id(addNew(slug, ann, "Unrated Player", "STANDARD", null, "CF")
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.status").value("PENDING"))
+			.andExpect(jsonPath("$.card.playerName").value("Unrated Player"))
+			.andExpect(jsonPath("$.card.rating").doesNotExist()));
+
+		api.send(post(cardPath(slug, cardId) + "/approve"), owner, null).andExpect(status().isNoContent());
+
+		api.get(base(slug) + "/roster", ann)
+			.andExpect(jsonPath("$.mySquad.cards[0].status").value("APPROVED"))
+			.andExpect(jsonPath("$.mySquad.cards[0].card.rating").doesNotExist());
+	}
+
 	private ResultActions startSeason(String slug, User owner, User other) throws Exception {
 		return api.send(post(base(slug) + "/seasons"), owner, "{\"participantIds\":[\"" + owner.id() + "\",\"" + other.id()
 				+ "\"],\"format\":\"SINGLE\",\"pointsWin\":3,\"pointsDraw\":1}");
 	}
 
-	private ResultActions addNew(String slug, User user, String name, String type, int rating, String position)
+	private ResultActions addNew(String slug, User user, String name, String type, Integer rating, String position)
 			throws Exception {
+		String ratingField = rating == null ? "" : ",\"rating\":" + rating;
 		return api.send(post(base(slug) + "/squad/cards"), user, "{\"playerName\":\"" + name + "\",\"cardType\":\"" + type
-				+ "\",\"rating\":" + rating + ",\"position\":\"" + position + "\"}");
+				+ "\"" + ratingField + ",\"position\":\"" + position + "\"}");
 	}
 
 	private ResultActions saveRules(String slug, User user, String json) throws Exception {

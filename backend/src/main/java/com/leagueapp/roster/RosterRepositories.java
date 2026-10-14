@@ -18,15 +18,15 @@ interface CardRepository extends JpaRepository<Card, UUID> {
 
 	@Query("""
 			select c from Card c where c.leagueId = :leagueId and lower(c.playerName) = lower(:name)
-			and c.cardType = :type and c.rating = :rating and c.position = :position""")
+			and c.cardType = :type and ((:rating is null and c.rating is null) or c.rating = :rating) and c.position = :position""")
 	Optional<Card> findSame(@Param("leagueId") UUID leagueId, @Param("name") String name, @Param("type") CardType type,
-			@Param("rating") short rating, @Param("position") Position position);
+			@Param("rating") Short rating, @Param("position") Position position);
 
 	/** Verified cards whose player name contains the (already escaped) text, best rated first. */
 	@Query("""
 			select c from Card c where c.leagueId = :leagueId and c.verified = true
 			and lower(c.playerName) like lower(concat('%', :text, '%')) escape '!'
-			order by c.rating desc, c.playerName""")
+			order by c.rating desc nulls last, c.playerName""")
 	List<Card> search(@Param("leagueId") UUID leagueId, @Param("text") String text, Limit limit);
 
 	Optional<Card> findByIdAndLeagueId(UUID id, UUID leagueId);
