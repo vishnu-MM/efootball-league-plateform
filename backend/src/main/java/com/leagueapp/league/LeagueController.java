@@ -1,5 +1,6 @@
 package com.leagueapp.league;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -9,6 +10,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -41,7 +43,7 @@ class LeagueController {
 		LeagueService.LeagueDetail detail = leagueService.detail(slug, currentUser.id().orElse(null));
 		League league = detail.league();
 		return new LeagueDetailResponse(league.getId(), league.getName(), league.getSlug(), league.getVisibility(),
-				detail.myRole(), detail.memberCount());
+				detail.myRole(), detail.memberCount(), league.getDeletedAt(), league.getRestoreUntil(), league.isHidden());
 	}
 
 	@PostMapping("/api/leagues")
@@ -55,10 +57,23 @@ class LeagueController {
 		return LeagueSummary.from(leagueService.update(slug, currentUser.requireId(), body.name(), body.visibility()));
 	}
 
+	@DeleteMapping("/api/leagues/{slug}")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	void delete(@PathVariable String slug, @Valid @RequestBody DeleteLeagueRequest body) {
+		leagueService.delete(slug, currentUser.requireId(), body.confirmName());
+	}
+
+	@PostMapping("/api/leagues/{slug}/restore")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	void restore(@PathVariable String slug) {
+		leagueService.restore(slug, currentUser.requireId());
+	}
+
 	@GetMapping("/api/leagues/mine")
 	List<MyLeagueResponse> mine() {
 		return leagueService.leaguesOf(currentUser.requireId()).stream()
-			.map(m -> new MyLeagueResponse(m.league().getId(), m.league().getName(), m.league().getSlug(), m.role()))
+			.map(m -> new MyLeagueResponse(m.league().getId(), m.league().getName(), m.league().getSlug(), m.role(),
+					m.league().getDeletedAt(), m.league().getRestoreUntil(), m.league().isHidden()))
 			.toList();
 	}
 
@@ -77,11 +92,16 @@ class LeagueController {
 
 	}
 
-	record MyLeagueResponse(UUID id, String name, String slug, LeagueRole role) {
+	record DeleteLeagueRequest(@NotNull String confirmName) {
+	}
+
+	record MyLeagueResponse(UUID id, String name, String slug, LeagueRole role, OffsetDateTime deletedAt,
+			OffsetDateTime restoreUntil, boolean hidden) {
 	}
 
 	record LeagueDetailResponse(UUID id, String name, String slug, League.Visibility visibility,
-			LeagueRole myRole, long memberCount) {
+			LeagueRole myRole, long memberCount, OffsetDateTime deletedAt, OffsetDateTime restoreUntil,
+			boolean hidden) {
 	}
 
 }

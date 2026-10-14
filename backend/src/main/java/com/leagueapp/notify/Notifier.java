@@ -152,6 +152,13 @@ class Notifier {
 				l.home());
 	}
 
+	@ApplicationModuleListener
+	void on(LeagueEvents.LeagueDeleted e) {
+		League l = league(e.leagueId());
+		l.send(e.actorId(), "LEAGUE_DELETED", l.members(),
+				l.team(e.actorId()) + " deleted " + l.name() + ". It will be gone for good in 7 days.", "/");
+	}
+
 	private League league(UUID leagueId) {
 		LeagueRef ref = leagueService.refs(List.of(leagueId)).get(leagueId);
 		List<MemberInfo> members = leagueService.memberInfos(leagueId);
